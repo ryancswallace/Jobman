@@ -7,6 +7,7 @@ import (
 	"io"
 	"time"
 
+	"github.com/ryancswallace/jobman/diagnostic"
 	"github.com/ryancswallace/jobman/internal/config"
 	"github.com/ryancswallace/jobman/internal/liveinput"
 	"github.com/ryancswallace/jobman/internal/model"
@@ -144,6 +145,16 @@ type ConfigurableBackend interface {
 // recovery operations.
 type DoctorBackend interface {
 	Doctor(context.Context, DoctorRequest) (DoctorReport, error)
+}
+
+// DiagnosticBackend exposes deterministic, bounded factual evidence without
+// expanding the stable minimal Backend interface used by embedders.
+type DiagnosticBackend interface {
+	DiagnosticEvidence(
+		context.Context,
+		diagnostic.EvidenceRequest,
+		diagnostic.Sanitizer,
+	) (diagnostic.Evidence, error)
 }
 
 // DoctorRequest selects optional, explicitly authorized recovery work.

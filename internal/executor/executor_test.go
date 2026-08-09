@@ -1,6 +1,8 @@
 package executor
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -123,5 +125,50 @@ func TestCommandAndResolveValidation(t *testing.T) {
 
 	if _, err := validateExecutable(string([]byte{'x', 0})); err == nil {
 		t.Fatal("validateExecutable(NUL) error = nil")
+	}
+}
+
+func TestCommandClassifiesOnlyEstablishedPreparationFailures(t *testing.T) {
+	t.Parallel()
+
+	executable, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	missingDirectory := filepath.Join(t.TempDir(), "missing")
+	_, _, err = Command(Request{Executable: executable, Directory: missingDirectory})
+	if kind, ok := ClassifyFailure(err); !ok || kind != FailureWorkingDirectoryMissing {
+		t.Fatalf("missing-directory classification = %q, %t; error = %v", kind, ok, err)
+	}
+	_, _, err = Command(Request{
+		Executable: filepath.Join(t.TempDir(), "missing"), Directory: t.TempDir(),
+	})
+	if kind, ok := ClassifyFailure(err); !ok || kind != FailureExecutableNotFound {
+		t.Fatalf("missing-executable classification = %q, %t; error = %v", kind, ok, err)
+	}
+	if kind, ok := ClassifyFailure(fs.ErrNotExist); ok || kind != FailureUnknown {
+		t.Fatalf("unattributed not-exist classification = %q, %t", kind, ok)
+	}
+	if kind, ok := ClassifyFailure(fs.ErrPermission); !ok || kind != FailurePermissionDenied {
+		t.Fatalf("unattributed permission classification = %q, %t", kind, ok)
+	}
+	if kind, ok := ClassifyFailure(errors.New("unknown")); ok || kind != FailureUnknown {
+		t.Fatalf("unknown classification = %q, %t", kind, ok)
+	}
+	wrapped := errors.New("wrapped failure")
+	failure := &FailureError{Kind: FailureUnknown, Err: wrapped}
+	if failure.Error() != wrapped.Error() || !errors.Is(failure, wrapped) {
+		t.Fatalf("FailureError() = %q, unwrap = %t", failure.Error(), errors.Is(failure, wrapped))
+	}
+
+	nonDirectory := filepath.Join(t.TempDir(), "not-a-directory")
+	if err := os.WriteFile(nonDirectory, []byte("fixture"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := Command(Request{Executable: executable, Directory: nonDirectory}); err == nil {
+		t.Fatal("Command(file working directory) error = nil")
+	}
+	if _, err := Resolve("uniquely-missing-executable", t.TempDir(), []string{"PATH=:"}); err == nil {
+		t.Fatal("Resolve(empty PATH entries) error = nil")
 	}
 }

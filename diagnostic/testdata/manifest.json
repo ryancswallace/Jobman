@@ -1,0 +1,56 @@
+{
+  "jobman_release": "unreleased",
+  "evidence_schema": 1,
+  "fixtures": [
+    {
+      "file": "active-run-v1.json",
+      "evidence_id": "sha256:f6b3c8054c2302030609fc22de3f5370566bd31ac505cba08c55bf0223730ccc",
+      "sha256": "b04aeee0c304f3ac264590aa7c4de241a7fe1a017d1e35d55c9a838a985ebf0b"
+    },
+    {
+      "file": "additive-fact-v1.json",
+      "evidence_id": "sha256:87f8ac639acedfbc31b31b32dc45636853bc87d6b2fd3ecc437b5e0158841899",
+      "sha256": "972aac40ad7a885f4ccf4cdddd069a4d054f8dabc622824d710ecdfe1571e722"
+    },
+    {
+      "file": "failed-exit-v1.json",
+      "evidence_id": "sha256:0da1dbcbafde83b3aab7110c8e0839aea5a0654b60ce7c425c114cbb95bc1931",
+      "sha256": "6fee1e03b3d9d4d74d3794d268aa8fdcaf29d05034de13fb76f431492b792cc4"
+    },
+    {
+      "file": "log-budget-boundary-v1.json",
+      "evidence_id": "sha256:75e276f53fac75fd1370d9ec886abc498bbfdf0e487432b0438be9501bbd833c",
+      "sha256": "49ee5e6cf5ae48b7f38bf174a20146c7cc25ea3aeaee77a7b2a1311b23c827e9"
+    },
+    {
+      "file": "notification-failure-v1.json",
+      "evidence_id": "sha256:63f3bd7efec5f767c770ef399ca881fbd4a22c244acd4c352160c4dd82774735",
+      "sha256": "b006720f10cb9d88b91d2c742ed6517bd727506815064da16a7f3f5d1992fef4"
+    },
+    {
+      "file": "pruned-logs-v1.json",
+      "evidence_id": "sha256:28f93f5cb163d1c932fc9d4946aad76e1430f028100ac147822886b4d9bf574d",
+      "sha256": "880f3442d8025b997de8ee4948b5beee4bf55ed3a1a8d6bd7db824aa8f9471f4"
+    },
+    {
+      "file": "secret-canary-v1.json",
+      "evidence_id": "sha256:da72ecf5aeb226b0c282dc45d78e142b55c301cf6d8c7069fdc8923673c2981c",
+      "sha256": "74bbc3f09dc287686629073f42d54000260a9cff53e0eb227f432468aeeafb35"
+    },
+    {
+      "file": "similar-history-v1.json",
+      "evidence_id": "sha256:4f31f45b1c593fda78cfcc3cbcca732412076ae866af7b2fa9e6e959f23480a9",
+      "sha256": "5fedb2ac62a56d65723dfaf81454eadcdcf133b5a97b43d3a5e985746250adba"
+    },
+    {
+      "file": "start-failure-v1.json",
+      "evidence_id": "sha256:590655b83d5c9f4eebe6c72f64ca09e724e8ffa3228f941c6703b51cb37fdbc9",
+      "sha256": "e870fac837dc96a2f90315da1b72ef99ed162af987176a574e48d34ac1577626"
+    },
+    {
+      "file": "timeout-v1.json",
+      "evidence_id": "sha256:941c0a627300a40f7e358fbbdab4446b57d255ee27656ca48bc20628fac6c0d5",
+      "sha256": "6e970f1482882740f89e75495d894f4b286690566429e849e331c557056215b7"
+    }
+  ]
+}

@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"io"
 	"net/url"
 	"path/filepath"
 	"strconv"
@@ -34,6 +35,7 @@ type Options struct {
 	JobmanVersion string
 	Now           func() time.Time
 	EventIDs      EventIDSource
+	Random        io.Reader
 }
 
 // EventIDSource supplies identifiers for append-only transition events.
@@ -44,15 +46,17 @@ type EventIDSource interface {
 // Store is a single-process handle to Jobman's per-user metadata database.
 // Each process deliberately owns only one pooled physical connection.
 type Store struct {
-	db            *sql.DB
-	stateDir      string
-	databasePath  string
-	sqliteVersion string
-	busyTimeout   time.Duration
-	now           func() time.Time
-	jobmanVersion string
-	eventIDs      EventIDSource
-	lastBackup    string
+	db             *sql.DB
+	stateDir       string
+	databasePath   string
+	sqliteVersion  string
+	busyTimeout    time.Duration
+	now            func() time.Time
+	jobmanVersion  string
+	eventIDs       EventIDSource
+	random         io.Reader
+	fingerprintKey [32]byte
+	lastBackup     string
 	// supervisorLeaseMu serializes this supervisor handle's lease renewal
 	// against terminal transitions that release the same supervisor revision.
 	supervisorLeaseMu sync.Mutex
@@ -110,6 +114,10 @@ func Open(ctx context.Context, options Options) (*Store, error) {
 		}
 		eventIDs = generator
 	}
+	randomSource := options.Random
+	if randomSource == nil {
+		randomSource = rand.Reader
+	}
 
 	db, err := sql.Open("sqlite", sqliteDSN(databasePath, busyTimeout))
 	if err != nil {
@@ -128,6 +136,7 @@ func Open(ctx context.Context, options Options) (*Store, error) {
 		now:           now,
 		jobmanVersion: options.JobmanVersion,
 		eventIDs:      eventIDs,
+		random:        randomSource,
 	}
 
 	if err := store.initialize(ctx); err != nil {
@@ -178,6 +187,9 @@ func (s *Store) initialize(ctx context.Context) error {
 		return err
 	}
 	if err := s.migrate(ctx); err != nil {
+		return err
+	}
+	if err := s.ensureFingerprintKey(ctx); err != nil {
 		return err
 	}
 

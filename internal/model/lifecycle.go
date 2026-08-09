@@ -442,10 +442,17 @@ func ResumeJob(job JobState, run *RunState, prior JobPhase, resumedAt time.Time)
 
 func retryDetails(disposition RunDisposition, diagnosticCode string) json.RawMessage {
 	value := struct {
-		NextRunAt      *time.Time `json:"next_run_at,omitempty"`
-		Reason         string     `json:"reason,omitempty"`
-		DiagnosticCode string     `json:"diagnostic_code,omitempty"`
+		NextRunAt      *time.Time        `json:"next_run_at,omitempty"`
+		Reason         string            `json:"reason,omitempty"`
+		DiagnosticCode string            `json:"diagnostic_code,omitempty"`
+		Diagnostic     *DiagnosticRecord `json:"diagnostic,omitempty"`
 	}{NextRunAt: disposition.NextRunAt, Reason: disposition.Reason, DiagnosticCode: diagnosticCode}
+	if diagnosticCode != "" {
+		record, err := NewDiagnosticRecord(DiagnosticCode(diagnosticCode), nil)
+		if err == nil {
+			value.Diagnostic = &record
+		}
+	}
 	encoded, err := json.Marshal(value)
 	if err != nil {
 		panic(fmt.Sprintf("encode retry details: %v", err))

@@ -186,6 +186,12 @@ func TestMigrationSixUpgradesNotificationQueueFromVersionFive(t *testing.T) {
 	if _, execErr := database.db.ExecContext(t.Context(), "DROP TABLE notification_deliveries"); execErr != nil {
 		t.Fatalf("remove migration-six table: %v", execErr)
 	}
+	if _, execErr := database.db.ExecContext(t.Context(), "DROP TABLE run_diagnostic_facts"); execErr != nil {
+		t.Fatalf("remove migration-eight facts table: %v", execErr)
+	}
+	if _, execErr := database.db.ExecContext(t.Context(), "DROP TABLE store_secrets"); execErr != nil {
+		t.Fatalf("remove migration-eight secret table: %v", execErr)
+	}
 	if _, execErr := database.db.ExecContext(t.Context(), "DELETE FROM schema_migrations WHERE version >= 6"); execErr != nil {
 		t.Fatalf("remove post-version-five migration history: %v", execErr)
 	}
@@ -230,10 +236,12 @@ func assertStrictSchemaTables(t *testing.T, store *Store) {
 		"jobs":                    false,
 		"notification_attempts":   false,
 		"notification_deliveries": false,
+		"run_diagnostic_facts":    false,
 		"run_log_pruning":         false,
 		"runs":                    false,
 		"schema_migrations":       false,
 		"state_events":            false,
+		"store_secrets":           false,
 		"supervisors":             false,
 		"wait_evaluations":        false,
 	}
@@ -277,20 +285,21 @@ func assertSchemaIndexes(t *testing.T, store *Store) {
 	t.Helper()
 
 	wantIndexes := map[string]bool{
-		"admission_requests_order":      false,
-		"admissions_active_global":      false,
-		"admissions_active_pool":        false,
-		"events_job":                    false,
-		"job_dependencies_target":       false,
-		"job_tags_tag":                  false,
-		"jobs_name":                     false,
-		"jobs_phase":                    false,
-		"jobs_submitted_order":          false,
-		"runs_job":                      false,
-		"runs_one_active_per_job":       false,
-		"notification_attempts_pending": false,
-		"notification_deliveries_job":   false,
-		"notification_deliveries_ready": false,
+		"admission_requests_order":         false,
+		"admissions_active_global":         false,
+		"admissions_active_pool":           false,
+		"events_job":                       false,
+		"job_dependencies_target":          false,
+		"job_tags_tag":                     false,
+		"jobs_name":                        false,
+		"jobs_phase":                       false,
+		"jobs_submitted_order":             false,
+		"runs_job":                         false,
+		"runs_one_active_per_job":          false,
+		"notification_attempts_pending":    false,
+		"notification_deliveries_job":      false,
+		"notification_deliveries_ready":    false,
+		"run_diagnostic_facts_fingerprint": false,
 	}
 	rows, queryErr := store.db.QueryContext(t.Context(), `
 		SELECT name

@@ -448,6 +448,12 @@ type Redactor struct {
 	patterns []*regexp.Regexp
 }
 
+// ProtectsValues reports whether the redactor has a configured pattern or
+// resolved secret value that can match content independently of a field name.
+func (redactor *Redactor) ProtectsValues() bool {
+	return redactor != nil && (len(redactor.values) != 0 || len(redactor.patterns) != 0)
+}
+
 // RedactField fully redacts sensitive fields and otherwise applies value redaction.
 func (redactor *Redactor) RedactField(name, value string) string {
 	if redactor == nil {

@@ -10,7 +10,7 @@ import (
 
 const (
 	applicationID        = 0x4a4f424d // "JOBM" in big-endian ASCII.
-	currentSchemaVersion = 7
+	currentSchemaVersion = 8
 )
 
 const migration1SQL = `
@@ -396,6 +396,61 @@ CREATE INDEX admission_requests_order
     ON admission_requests(enqueued_at_ns, job_id);
 `
 
+const migration8SQL = `
+CREATE TABLE store_secrets (
+    name TEXT PRIMARY KEY CHECK (name = 'failure_fingerprint_hmac_v1'),
+    value BLOB NOT NULL CHECK (length(value) = 32),
+    created_at_ns INTEGER NOT NULL CHECK (created_at_ns >= 0)
+) STRICT;
+
+CREATE TABLE run_diagnostic_facts (
+    run_id TEXT PRIMARY KEY REFERENCES runs(id) ON DELETE CASCADE,
+    schema_version INTEGER NOT NULL CHECK (schema_version = 1),
+    resources_json TEXT NOT NULL CHECK (
+        json_valid(resources_json) AND json_type(resources_json) = 'array' AND
+        length(CAST(resources_json AS BLOB)) <= 16384
+    ),
+    failure_class TEXT CHECK (
+        failure_class IS NULL OR (
+            length(failure_class) BETWEEN 1 AND 128 AND
+            failure_class NOT GLOB '*[^a-z0-9_]*'
+        )
+    ),
+    fingerprint_algorithm TEXT CHECK (
+        fingerprint_algorithm IS NULL OR fingerprint_algorithm = 'hmac-sha256'
+    ),
+    fingerprint_input_version INTEGER CHECK (
+        fingerprint_input_version IS NULL OR fingerprint_input_version = 1
+    ),
+    fingerprint_value BLOB CHECK (
+        fingerprint_value IS NULL OR length(fingerprint_value) = 32
+    ),
+    recorded_at_ns INTEGER NOT NULL CHECK (recorded_at_ns >= 0),
+    CHECK (
+        (
+            fingerprint_algorithm IS NULL AND
+            fingerprint_input_version IS NULL AND
+            fingerprint_value IS NULL
+        ) OR (
+            fingerprint_algorithm IS NOT NULL AND
+            fingerprint_input_version IS NOT NULL AND
+            fingerprint_value IS NOT NULL
+        )
+    ),
+    CHECK (fingerprint_value IS NULL OR failure_class IS NOT NULL)
+) STRICT;
+
+CREATE INDEX run_diagnostic_facts_fingerprint
+    ON run_diagnostic_facts(
+        fingerprint_algorithm,
+        fingerprint_input_version,
+        fingerprint_value,
+        recorded_at_ns DESC,
+        run_id DESC
+    )
+    WHERE fingerprint_value IS NOT NULL;
+`
+
 type migration struct {
 	version int
 	sql     string
@@ -409,6 +464,7 @@ var migrations = []migration{
 	{version: 5, sql: migration5SQL},
 	{version: 6, sql: migration6SQL},
 	{version: 7, sql: migration7SQL},
+	{version: 8, sql: migration8SQL},
 }
 
 func (s *Store) migrate(ctx context.Context) error {
@@ -571,5 +627,9 @@ func (s *Store) verifySchema(ctx context.Context) error {
 		return &SchemaError{Reason: fmt.Sprintf("schema version is %d, want %d", version, currentSchemaVersion)}
 	}
 
-	return verifyAppliedMigrations(ctx, s.db, version)
+	if err := verifyAppliedMigrations(ctx, s.db, version); err != nil {
+		return err
+	}
+
+	return s.verifyFingerprintKey(ctx)
 }

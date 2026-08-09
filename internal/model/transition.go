@@ -805,10 +805,22 @@ func diagnosticDetails(code string) json.RawMessage {
 	if code == "" {
 		return nil
 	}
+	record, recordErr := NewDiagnosticRecord(DiagnosticCode(code), nil)
+	if recordErr != nil {
+		encoded, err := json.Marshal(struct {
+			DiagnosticCode string `json:"diagnostic_code"`
+		}{DiagnosticCode: code})
+		if err != nil {
+			panic(fmt.Sprintf("encode legacy diagnostic details: %v", err))
+		}
+
+		return encoded
+	}
 
 	encoded, err := json.Marshal(struct {
-		DiagnosticCode string `json:"diagnostic_code"`
-	}{DiagnosticCode: code})
+		DiagnosticCode string           `json:"diagnostic_code"`
+		Diagnostic     DiagnosticRecord `json:"diagnostic"`
+	}{DiagnosticCode: code, Diagnostic: record})
 	if err != nil {
 		panic(fmt.Sprintf("encode static diagnostic details: %v", err))
 	}

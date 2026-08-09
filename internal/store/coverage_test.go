@@ -1061,7 +1061,7 @@ func TestSchemaAndMigrationValidationEdges(t *testing.T) {
 			t.Fatal(err)
 		}
 		t.Cleanup(func() { _ = tx.Rollback() })
-		if err := database.applyMigration(t.Context(), tx, migration{version: 8, sql: "not valid SQL"}, 7); err == nil {
+		if err := database.applyMigration(t.Context(), tx, migration{version: 9, sql: "not valid SQL"}, 8); err == nil {
 			t.Fatal("applyMigration(invalid SQL) error = nil")
 		}
 	})
@@ -1072,8 +1072,8 @@ func TestSchemaAndMigrationValidationEdges(t *testing.T) {
 			t.Fatal(err)
 		}
 		t.Cleanup(func() { _ = tx.Rollback() })
-		item := migration{version: 8, sql: "DROP TABLE schema_migrations"}
-		if err := database.applyMigration(t.Context(), tx, item, 7); err == nil {
+		item := migration{version: 9, sql: "DROP TABLE schema_migrations"}
+		if err := database.applyMigration(t.Context(), tx, item, 8); err == nil {
 			t.Fatal("applyMigration(missing history table) error = nil")
 		}
 	})
@@ -1103,7 +1103,7 @@ func TestMigrationHistoryAndSchemaCorruptionEdges(t *testing.T) {
 		},
 		{
 			name:   "history shorter than header",
-			mutate: "DELETE FROM schema_migrations WHERE version = 7",
+			mutate: "DELETE FROM schema_migrations WHERE version = 8",
 			verify: func(database *Store) error {
 				return verifyAppliedMigrations(t.Context(), database.db, currentSchemaVersion)
 			},

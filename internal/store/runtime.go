@@ -417,6 +417,43 @@ func (s *Store) CompleteRunWithDisposition(
 	completedAt time.Time,
 	disposition model.RunDisposition,
 ) (model.TransitionResult, error) {
+	return s.commitCompletedRun(
+		ctx, jobID, runID, outcome, exit, logs, diagnosticCode, completedAt, disposition, nil,
+	)
+}
+
+// CompleteRunWithDispositionAndFacts atomically records the completed run,
+// scheduler counters, and typed post-wait diagnostic facts.
+func (s *Store) CompleteRunWithDispositionAndFacts(
+	ctx context.Context,
+	jobID model.JobID,
+	runID model.RunID,
+	outcome model.RunOutcome,
+	exit *model.ExitInfo,
+	logs model.LogMetadata,
+	diagnosticCode string,
+	completedAt time.Time,
+	disposition model.RunDisposition,
+	factsInput RunDiagnosticFactsInput,
+) (model.TransitionResult, error) {
+	return s.commitCompletedRun(
+		ctx, jobID, runID, outcome, exit, logs, diagnosticCode, completedAt, disposition, &factsInput,
+	)
+}
+
+//nolint:gocognit // Completion validates policy, facts, ownership, counters, and admission in one transaction.
+func (s *Store) commitCompletedRun(
+	ctx context.Context,
+	jobID model.JobID,
+	runID model.RunID,
+	outcome model.RunOutcome,
+	exit *model.ExitInfo,
+	logs model.LogMetadata,
+	diagnosticCode string,
+	completedAt time.Time,
+	disposition model.RunDisposition,
+	factsInput *RunDiagnosticFactsInput,
+) (model.TransitionResult, error) {
 	if disposition.TerminalOutcome != "" {
 		s.supervisorLeaseMu.Lock()
 		defer s.supervisorLeaseMu.Unlock()
@@ -439,6 +476,14 @@ func (s *Store) CompleteRunWithDisposition(
 	if err != nil {
 		return model.TransitionResult{}, err
 	}
+	var facts *RunDiagnosticFacts
+	if factsInput != nil {
+		built, buildErr := s.buildRunDiagnosticFacts(job, *result.Run, *factsInput, completedAt)
+		if buildErr != nil {
+			return model.TransitionResult{}, buildErr
+		}
+		facts = &built
+	}
 	if disposition.TerminalOutcome != "" {
 		if err := s.attachSupervisorRelease(ctx, &result, completedAt); err != nil {
 			return model.TransitionResult{}, err
@@ -451,6 +496,11 @@ func (s *Store) CompleteRunWithDisposition(
 		failureIncrement = 0
 	}
 	if err := s.commitTransitionWithRuntime(ctx, result, func(tx *sql.Tx) error {
+		if facts != nil {
+			if persistErr := persistRunDiagnosticFacts(ctx, tx, runID, *facts); persistErr != nil {
+				return persistErr
+			}
+		}
 		update, updateErr := tx.ExecContext(ctx, `
 			UPDATE job_runtime
 			SET revision = revision + 1,

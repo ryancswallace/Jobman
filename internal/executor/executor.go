@@ -4,12 +4,49 @@ package executor
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
 )
+
+// FailureKind is a safe process-preparation classification that contains no
+// command, path, environment, or raw platform error text.
+type FailureKind string
+
+// Stable process-preparation failure classes.
+const (
+	FailureExecutableNotFound      FailureKind = "executable_not_found"
+	FailureWorkingDirectoryMissing FailureKind = "working_directory_missing"
+	FailurePermissionDenied        FailureKind = "permission_denied"
+	FailureInvalidExecutable       FailureKind = "invalid_executable"
+	FailureUnknown                 FailureKind = "unknown"
+)
+
+// FailureError wraps an immediate error while exposing only Kind for durable
+// diagnostics.
+type FailureError struct {
+	Kind FailureKind
+	Err  error
+}
+
+func (failure *FailureError) Error() string { return failure.Err.Error() }
+func (failure *FailureError) Unwrap() error { return failure.Err }
+
+// ClassifyFailure returns a safe failure kind without retaining the raw error.
+func ClassifyFailure(err error) (FailureKind, bool) {
+	var failure *FailureError
+	if errors.As(err, &failure) {
+		return failure.Kind, true
+	}
+	if errors.Is(err, fs.ErrPermission) {
+		return FailurePermissionDenied, true
+	}
+
+	return FailureUnknown, false
+}
 
 // Request describes one direct process invocation.
 type Request struct {
@@ -29,6 +66,9 @@ func Command(request Request) (*exec.Cmd, string, error) {
 	}
 	if !filepath.IsAbs(request.Directory) {
 		return nil, "", errors.New("resolve executable: working directory must be absolute")
+	}
+	if err := validateWorkingDirectory(request.Directory); err != nil {
+		return nil, "", err
 	}
 
 	environment := MergeEnvironment(request.BaseEnv, request.AddEnv, request.RemoveEnv)
@@ -113,16 +153,41 @@ func validateExecutable(path string) (string, error) {
 	}
 	info, err := os.Stat(absolute)
 	if err != nil {
-		return "", fmt.Errorf("inspect executable %q: %w", absolute, err)
+		kind := FailureUnknown
+		if errors.Is(err, fs.ErrNotExist) {
+			kind = FailureExecutableNotFound
+		} else if errors.Is(err, fs.ErrPermission) {
+			kind = FailurePermissionDenied
+		}
+		return "", &FailureError{Kind: kind, Err: fmt.Errorf("inspect executable %q: %w", absolute, err)}
 	}
 	if !info.Mode().IsRegular() {
-		return "", fmt.Errorf("inspect executable %q: not a regular file", absolute)
+		return "", &FailureError{Kind: FailureInvalidExecutable, Err: fmt.Errorf("inspect executable %q: not a regular file", absolute)}
 	}
 	if !isExecutable(info.Mode()) {
-		return "", fmt.Errorf("inspect executable %q: permission denied", absolute)
+		return "", &FailureError{Kind: FailurePermissionDenied, Err: fmt.Errorf("inspect executable %q: permission denied", absolute)}
 	}
 
 	return filepath.Clean(absolute), nil
+}
+
+func validateWorkingDirectory(path string) error {
+	info, err := os.Stat(path)
+	if err != nil {
+		kind := FailureUnknown
+		if errors.Is(err, fs.ErrNotExist) {
+			kind = FailureWorkingDirectoryMissing
+		} else if errors.Is(err, fs.ErrPermission) {
+			kind = FailurePermissionDenied
+		}
+
+		return &FailureError{Kind: kind, Err: fmt.Errorf("inspect working directory %q: %w", path, err)}
+	}
+	if !info.IsDir() {
+		return &FailureError{Kind: FailureWorkingDirectoryMissing, Err: fmt.Errorf("inspect working directory %q: not a directory", path)}
+	}
+
+	return nil
 }
 
 func environmentValue(environment []string, wanted string) string {

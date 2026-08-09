@@ -1,0 +1,120 @@
+package diagnostic
+
+// Core evidence item codes. New optional codes may be added without changing
+// the envelope schema; changing a code's value type or meaning requires a new
+// evidence schema version or a new code.
+const (
+	CodeSourceContext            = "jobman.source.context"
+	CodeJobPhase                 = "jobman.job.phase"
+	CodeJobOutcome               = "jobman.job.outcome"
+	CodeJobRevision              = "jobman.job.revision"
+	CodeJobSubmittedAt           = "jobman.job.submitted_at"
+	CodeJobClaimedAt             = "jobman.job.claimed_at"
+	CodeJobStartedAt             = "jobman.job.started_at"
+	CodeJobCompletedAt           = "jobman.job.completed_at"
+	CodeJobDiagnostic            = "jobman.job.diagnostic_code"
+	CodeJobCancellationReason    = "jobman.job.cancellation.reason"
+	CodeJobCancellationAt        = "jobman.job.cancellation.requested_at"
+	CodeJobName                  = "jobman.job.name"
+	CodeTargetCommand            = "jobman.target.command"
+	CodeTargetWorkingDirectory   = "jobman.target.working_directory"
+	CodeTargetEnvironmentNames   = "jobman.target.environment_names"
+	CodeTargetStdinPath          = "jobman.target.stdin_path"
+	CodeExecutionPolicy          = "jobman.policy.configuration"
+	CodeWaitConfiguration        = "jobman.wait.configuration"
+	CodeWaitCommand              = "jobman.wait.command"
+	CodeWaitPath                 = "jobman.wait.path"
+	CodeWaitEnvironmentNames     = "jobman.wait.environment_names"
+	CodeNotifierConfiguration    = "jobman.notification.configuration"
+	CodeNotifierCommand          = "jobman.notification.command"
+	CodeNotifierWorkingDirectory = "jobman.notification.working_directory"
+	CodeNotifierEnvironmentNames = "jobman.notification.environment_names"
+
+	CodeRunPhase              = "jobman.run.phase"
+	CodeRunOutcome            = "jobman.run.outcome"
+	CodeRunRevision           = "jobman.run.revision"
+	CodeRunReservedAt         = "jobman.run.reserved_at"
+	CodeRunStartedAt          = "jobman.run.started_at"
+	CodeRunCompletedAt        = "jobman.run.completed_at"
+	CodeRunDuration           = "jobman.run.duration"
+	CodeRunExitCode           = "jobman.run.exit.code"
+	CodeRunExitSignal         = "jobman.run.exit.signal"
+	CodeRunExitPlatformReason = "jobman.run.exit.platform_reason"
+	CodeRunDiagnostic         = "jobman.run.diagnostic_code"
+	CodeRunTimeoutScope       = "jobman.run.timeout.scope"
+	CodeRunResolvedExecutable = "jobman.run.resolved_executable"
+	CodeRunStopReason         = "jobman.run.stop_reason"
+
+	CodeLogAvailable       = "jobman.log.available"
+	CodeLogIntegrity       = "jobman.log.integrity"
+	CodeLogRecordingHealth = "jobman.log.recording_health"
+	CodeLogDiagnostic      = "jobman.log.diagnostic_code"
+	CodeLogStdoutBytes     = "jobman.log.stdout.bytes"
+	CodeLogStderrBytes     = "jobman.log.stderr.bytes"
+
+	CodeRuntimeRunCount      = "jobman.policy.run_count"
+	CodeRuntimeSuccessCount  = "jobman.policy.success_count"
+	CodeRuntimeFailureCount  = "jobman.policy.failure_count"
+	CodeRuntimeNextRunAt     = "jobman.policy.next_run_at"
+	CodeRuntimeWaitingReason = "jobman.policy.waiting_reason"
+	CodeRuntimePausedFrom    = "jobman.policy.paused_from"
+	CodeRuntimeTotalPaused   = "jobman.policy.total_paused"
+
+	CodeDependencyPredicate       = "jobman.dependency.predicate"
+	CodeDependencyJobID           = "jobman.dependency.job_id"
+	CodeDependencyObservedOutcome = "jobman.dependency.observed_outcome"
+	CodeDependencySatisfied       = "jobman.dependency.satisfied"
+	CodeWaitKind                  = "jobman.wait.kind"
+	CodeWaitAttempts              = "jobman.wait.attempt_count"
+	CodeWaitSatisfied             = "jobman.wait.satisfied"
+	CodeWaitDiagnostic            = "jobman.wait.diagnostic_code"
+	CodeAdmissionPool             = "jobman.admission.pool"
+	CodeAdmissionSlots            = "jobman.admission.slots"
+	CodeAdmissionReleased         = "jobman.admission.released"
+	CodeAdmissionLeaseExpires     = "jobman.admission.lease_expires"
+	CodeNotificationStatus        = "jobman.notification.status"
+	CodeNotificationDiagnostic    = "jobman.notification.diagnostic_code"
+	CodeNotificationRetryable     = "jobman.notification.retryable"
+	CodeLifecycleEvent            = "jobman.lifecycle.event"
+	CodeFailureClass              = "jobman.failure.class"
+	CodeFailureFingerprint        = "jobman.failure.fingerprint"
+	CodeSimilarFailure            = "jobman.failure.similar"
+	CodeResourceObservation       = "jobman.resource.observation"
+)
+
+// Core omission codes.
+const (
+	OmissionLogContentNotRequested        = "log_content_not_requested"
+	OmissionLogsUnavailable               = "logs_unavailable"
+	OmissionLogsPruned                    = "logs_pruned"
+	OmissionLogBudgetExceeded             = "log_budget_exceeded"
+	OmissionMetadataBudgetExceeded        = "metadata_budget_exceeded"
+	OmissionHistoryTruncated              = "history_truncated"
+	OmissionEventsTruncated               = "events_truncated"
+	OmissionSimilarNotRequested           = "similar_history_not_requested"
+	OmissionSimilarUnavailable            = "similar_history_unavailable"
+	OmissionSimilarPartiallyIndexed       = "similar_history_partially_indexed"
+	OmissionSimilarTruncated              = "similar_history_truncated"
+	OmissionResourceUnsupported           = "resource_observation_unsupported"
+	OmissionResourceUnavailable           = "resource_observation_unavailable"
+	OmissionResourceNotApplicable         = "resource_observation_not_applicable"
+	OmissionConfiguredRedactionMissing    = "configured_redaction_unavailable"
+	OmissionActiveStateMayHaveAdvanced    = "active_state_may_have_advanced"
+	OmissionLegacyDiagnosticUnclassified  = "legacy_diagnostic_unclassified"
+	OmissionCommandNotRequested           = "command_context_not_requested"
+	OmissionCommandLimitExceeded          = "command_context_limit_exceeded"
+	OmissionPathsNotRequested             = "path_context_not_requested"
+	OmissionPathLimitExceeded             = "path_context_limit_exceeded"
+	OmissionEnvironmentNamesNotRequested  = "environment_names_not_requested"
+	OmissionEnvironmentNamesLimitExceeded = "environment_names_limit_exceeded"
+)
+
+// Artifact roles.
+const (
+	ArtifactRoleLogTail = "run_log_tail"
+)
+
+// Redaction notice codes.
+const (
+	RedactionConfiguredPattern = "configured_pattern_redacted"
+)

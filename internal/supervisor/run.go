@@ -25,6 +25,7 @@ import (
 	"github.com/ryancswallace/jobman/internal/model"
 	"github.com/ryancswallace/jobman/internal/platform"
 	"github.com/ryancswallace/jobman/internal/policy"
+	"github.com/ryancswallace/jobman/internal/resourceusage"
 	"github.com/ryancswallace/jobman/internal/store"
 )
 
@@ -506,6 +507,7 @@ func waitAndFinalizeRun(
 	captureErr := collectCaptureErrors(captureErrors)
 	closeErr := capture.Close()
 	logs = completedLogMetadata(logs, captureErr, closeErr)
+	resources := resourceusage.Observe(target.command.ProcessState)
 	if waitErr == nil && controlErr != nil {
 		return false, errors.Join(controlErr, captureErr, closeErr)
 	}
@@ -558,7 +560,7 @@ func waitAndFinalizeRun(
 		}
 	}
 	faultinject.Hit("run-completion-before-commit")
-	completed, err := database.CompleteRunWithDisposition(
+	completed, err := database.CompleteRunWithDispositionAndFacts(
 		operationCtx,
 		jobID,
 		runID,
@@ -568,6 +570,7 @@ func waitAndFinalizeRun(
 		diagnostic,
 		completedAt,
 		disposition,
+		store.RunDiagnosticFactsInput{Resources: resources, PolicyDisposition: classification},
 	)
 	if err != nil {
 		return false, errors.Join(fmt.Errorf("finalize run: %w", err), captureErr, closeErr)
@@ -883,15 +886,16 @@ func finalizeReservedCancellation(
 	if current.Cancellation.Reason == model.StopReasonTimeout {
 		outcome = model.RunOutcomeTimedOut
 	}
-	disposition, _, policyErr := dispositionForRun(
+	completedAt := time.Now().UTC()
+	disposition, classification, policyErr := dispositionForRun(
 		current,
 		runtimeState,
 		outcome,
 		nil,
-		time.Now().UTC(),
+		completedAt,
 		jitter,
 	)
-	completed, transitionErr := database.CompleteRunWithDisposition(
+	completed, transitionErr := database.CompleteRunWithDispositionAndFacts(
 		ctx,
 		jobID,
 		runID,
@@ -899,11 +903,12 @@ func finalizeReservedCancellation(
 		nil,
 		logs,
 		"",
-		time.Now().UTC(),
+		completedAt,
 		disposition,
+		store.RunDiagnosticFactsInput{PolicyDisposition: classification},
 	)
 	if transitionErr == nil {
-		notifyCompletedRun(ctx, database, completed, outcome, time.Now().UTC())
+		notifyCompletedRun(ctx, database, completed, outcome, completedAt)
 	}
 
 	return disposition.TerminalOutcome != "", errors.Join(closeErr, runtimeErr, policyErr, transitionErr)
@@ -926,34 +931,46 @@ func finalizeStartFailure(
 	logs = completedLogMetadata(logs, nil, closeErr)
 	current, getErr := database.GetJob(ctx, jobID)
 	runtimeState, runtimeErr := database.GetRuntime(ctx, jobID)
-	disposition, _, policyErr := dispositionForRun(
+	completedAt := time.Now().UTC()
+	disposition, classification, policyErr := dispositionForRun(
 		current,
 		runtimeState,
 		model.RunOutcomeStartFailed,
 		nil,
-		time.Now().UTC(),
+		completedAt,
 		jitter,
 	)
-	completed, transitionErr := database.CompleteRunWithDisposition(
+	completed, transitionErr := database.CompleteRunWithDispositionAndFacts(
 		ctx,
 		jobID,
 		runID,
 		model.RunOutcomeStartFailed,
 		nil,
 		logs,
-		"target_start_failed",
-		time.Now().UTC(),
+		startFailureDiagnostic(cause),
+		completedAt,
 		disposition,
+		store.RunDiagnosticFactsInput{PolicyDisposition: classification},
 	)
 	if transitionErr == nil {
-		notifyCompletedRun(ctx, database, completed, model.RunOutcomeStartFailed, time.Now().UTC())
+		notifyCompletedRun(ctx, database, completed, model.RunOutcomeStartFailed, completedAt)
 	}
 
-	// A start failure is a managed result, not a supervisor failure. Its
-	// bounded diagnostic code is persisted without exposing command contents.
-	_ = cause
-
 	return disposition.TerminalOutcome != "", errors.Join(closeErr, getErr, runtimeErr, policyErr, transitionErr)
+}
+
+func startFailureDiagnostic(cause error) string {
+	kind, _ := executor.ClassifyFailure(cause)
+	switch kind {
+	case executor.FailureExecutableNotFound:
+		return string(model.DiagnosticTargetExecutableNotFound)
+	case executor.FailureWorkingDirectoryMissing:
+		return string(model.DiagnosticTargetWorkingDirectoryMissing)
+	case executor.FailurePermissionDenied:
+		return string(model.DiagnosticTargetPermissionDenied)
+	default:
+		return string(model.DiagnosticTargetStartFailed)
+	}
 }
 
 func drainPipe(

@@ -72,6 +72,24 @@ func TestAliveRejectsIdentityMismatch(t *testing.T) {
 	}
 }
 
+func TestProcessOperationsTreatGoneProcessAsComplete(t *testing.T) {
+	t.Parallel()
+
+	gone := ProcessIdentity{PID: 1 << 30, Creation: "missing", Boot: "missing"}
+	if alive, err := Alive(gone); err != nil || alive {
+		t.Fatalf("Alive(missing) = %t, %v", alive, err)
+	}
+	for name, operation := range map[string]func() error{
+		"terminate": func() error { return Terminate(gone, false) },
+		"pause":     func() error { return Pause(gone) },
+		"resume":    func() error { return Resume(gone) },
+	} {
+		if err := operation(); err != nil {
+			t.Errorf("%s(missing) error = %v", name, err)
+		}
+	}
+}
+
 func TestProcessOperationsAndConfiguration(t *testing.T) {
 	if !PauseResumeSupported() {
 		t.Skip("managed-tree pause and resume are unavailable")
@@ -156,20 +174,6 @@ func TestProcessOperationsAndConfiguration(t *testing.T) {
 		}
 		_ = stdin.Close()
 		waited = true
-	}
-
-	gone := ProcessIdentity{PID: 1 << 30, Creation: "missing", Boot: "missing"}
-	if alive, err := Alive(gone); err != nil || alive {
-		t.Fatalf("Alive(missing) = %t, %v", alive, err)
-	}
-	for name, operation := range map[string]func() error{
-		"terminate": func() error { return Terminate(gone, false) },
-		"pause":     func() error { return Pause(gone) },
-		"resume":    func() error { return Resume(gone) },
-	} {
-		if err := operation(); err != nil {
-			t.Errorf("%s(missing) error = %v", name, err)
-		}
 	}
 }
 

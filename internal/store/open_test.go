@@ -1,6 +1,7 @@
 package store
 
 import (
+	"bytes"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -63,10 +64,12 @@ func TestOpenInitializesPrivateSQLite(t *testing.T) {
 		"jobs",
 		"notification_attempts",
 		"notification_deliveries",
+		"run_diagnostic_facts",
 		"run_log_pruning",
 		"runs",
 		"schema_migrations",
 		"state_events",
+		"store_secrets",
 		"supervisors",
 		"wait_evaluations",
 	}
@@ -145,6 +148,112 @@ func TestOpenExistingDatabase(t *testing.T) {
 	}
 	if err := second.Close(); err != nil {
 		t.Fatalf("second Close() error = %v", err)
+	}
+}
+
+func TestOpenInitializesRecoversAndPreservesFingerprintKey(t *testing.T) {
+	t.Parallel()
+
+	stateDir := filepath.Join(t.TempDir(), "state")
+	firstEntropy := bytes.Repeat([]byte{0x71}, fingerprintKeyBytes)
+	first, err := Open(t.Context(), Options{StateDir: stateDir, Random: bytes.NewReader(firstEntropy)})
+	if err != nil {
+		t.Fatalf("Open(first) error = %v", err)
+	}
+	if !bytes.Equal(first.fingerprintKey[:], firstEntropy) {
+		t.Fatal("initial fingerprint key does not match injected entropy")
+	}
+	if closeErr := first.Close(); closeErr != nil {
+		t.Fatalf("Close(first) error = %v", closeErr)
+	}
+
+	// Existing current stores need no randomness and therefore no writer merely
+	// to load their key.
+	second, err := Open(t.Context(), Options{StateDir: stateDir, Random: bytes.NewReader(nil)})
+	if err != nil {
+		t.Fatalf("Open(existing) error = %v", err)
+	}
+	if !bytes.Equal(second.fingerprintKey[:], firstEntropy) {
+		t.Fatal("reopened store changed its fingerprint key")
+	}
+	if _, deleteErr := second.db.ExecContext(t.Context(), `DELETE FROM store_secrets`); deleteErr != nil {
+		t.Fatalf("simulate interrupted key initialization: %v", deleteErr)
+	}
+	if closeErr := second.Close(); closeErr != nil {
+		t.Fatalf("Close(second) error = %v", closeErr)
+	}
+
+	recoveryEntropy := bytes.Repeat([]byte{0x72}, fingerprintKeyBytes)
+	recovered, err := Open(t.Context(), Options{StateDir: stateDir, Random: bytes.NewReader(recoveryEntropy)})
+	if err != nil {
+		t.Fatalf("Open(missing key) error = %v", err)
+	}
+	defer func() {
+		if closeErr := recovered.Close(); closeErr != nil {
+			t.Errorf("Close(recovered) error = %v", closeErr)
+		}
+	}()
+	if !bytes.Equal(recovered.fingerprintKey[:], recoveryEntropy) {
+		t.Fatal("missing-key recovery did not persist injected entropy")
+	}
+}
+
+func TestOpenRejectsCorruptFingerprintKey(t *testing.T) {
+	t.Parallel()
+
+	stateDir := filepath.Join(t.TempDir(), "state")
+	database, err := Open(t.Context(), Options{StateDir: stateDir})
+	if err != nil {
+		t.Fatalf("Open() error = %v", err)
+	}
+	if _, pragmaErr := database.db.ExecContext(t.Context(), `PRAGMA ignore_check_constraints = ON`); pragmaErr != nil {
+		t.Fatalf("disable check constraints: %v", pragmaErr)
+	}
+	if _, updateErr := database.db.ExecContext(t.Context(), `
+		UPDATE store_secrets SET value = zeroblob(31) WHERE name = ?`, fingerprintSecretName); updateErr != nil {
+		t.Fatalf("corrupt fingerprint key: %v", updateErr)
+	}
+	if closeErr := database.Close(); closeErr != nil {
+		t.Fatalf("Close() error = %v", closeErr)
+	}
+
+	opened, err := Open(t.Context(), Options{StateDir: stateDir})
+	if opened != nil {
+		_ = opened.Close()
+	}
+	var schemaErr *SchemaError
+	if !errors.As(err, &schemaErr) {
+		t.Fatalf("Open(corrupt key) error = %v, want *SchemaError", err)
+	}
+}
+
+func TestOpenRejectsMissingKeyWhenFingerprintsExist(t *testing.T) {
+	t.Parallel()
+
+	stateDir := filepath.Join(t.TempDir(), "state")
+	database, err := Open(t.Context(), Options{
+		StateDir: stateDir, EventIDs: newSequentialEventIDs(0x78a0),
+	})
+	if err != nil {
+		t.Fatalf("Open() error = %v", err)
+	}
+	completeFactFailure(t, database, 0x78b0, "/test/bin/worker", storeTestTime())
+	if _, deleteErr := database.db.ExecContext(t.Context(), `DELETE FROM store_secrets`); deleteErr != nil {
+		t.Fatalf("remove key: %v", deleteErr)
+	}
+	if closeErr := database.Close(); closeErr != nil {
+		t.Fatalf("Close() error = %v", closeErr)
+	}
+
+	opened, err := Open(t.Context(), Options{
+		StateDir: stateDir, Random: bytes.NewReader(bytes.Repeat([]byte{0x79}, fingerprintKeyBytes)),
+	})
+	if opened != nil {
+		_ = opened.Close()
+	}
+	var schemaErr *SchemaError
+	if !errors.As(err, &schemaErr) || !strings.Contains(schemaErr.Error(), "indexed fingerprints exist") {
+		t.Fatalf("Open(missing used key) error = %v, want fingerprint schema error", err)
 	}
 }
 

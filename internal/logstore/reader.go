@@ -1,6 +1,7 @@
 package logstore
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -10,6 +11,15 @@ import (
 	"strconv"
 	"strings"
 )
+
+// TailSnapshot is a bounded point-in-time selection from one logical raw
+// stream across all retained rotation segments.
+type TailSnapshot struct {
+	Data          []byte
+	OriginalBytes uint64
+	ByteStart     uint64
+	ByteEnd       uint64
+}
 
 // Reader opens raw streams and the chunk index for one existing run.
 type Reader struct {
@@ -374,6 +384,103 @@ func (reader *Reader) StreamSize(stream Stream) (uint64, error) {
 	}
 
 	return total, nil
+}
+
+// ReadTail reads at most maximumBytes from the end of one logical stream
+// without buffering the complete log. A zero maximum selects no bytes while
+// still returning the observed stream size.
+//
+//nolint:gocognit,cyclop // Bounded reverse selection validates every segment and close operation explicitly.
+func (reader *Reader) ReadTail(
+	ctx context.Context,
+	stream Stream,
+	maximumBytes uint64,
+) (TailSnapshot, error) {
+	if ctx == nil {
+		return TailSnapshot{}, errors.New("read log tail: nil context")
+	}
+	maximumAllocation := uint64(^uint(0) >> 1)
+	if maximumBytes > maximumAllocation {
+		return TailSnapshot{}, errors.New("read log tail: maximum bytes exceeds addressable memory")
+	}
+	segments, err := reader.streamSegments(stream)
+	if err != nil {
+		return TailSnapshot{}, err
+	}
+	sizes := make([]uint64, len(segments))
+	var total uint64
+	for index, segment := range segments {
+		if err := ctx.Err(); err != nil {
+			return TailSnapshot{}, fmt.Errorf("read log tail: %w", err)
+		}
+		size, err := privateRegularFileSize(segment.path)
+		if err != nil {
+			return TailSnapshot{}, err
+		}
+		if total > ^uint64(0)-size {
+			return TailSnapshot{}, fmt.Errorf("%w: %s stream size overflows", ErrUnsafePath, stream)
+		}
+		sizes[index] = size
+		total += size
+	}
+	selected := min(total, maximumBytes)
+	start := total - selected
+	result := TailSnapshot{
+		Data: make([]byte, 0, selected), OriginalBytes: total,
+		ByteStart: start, ByteEnd: total,
+	}
+	if selected == 0 {
+		return result, nil
+	}
+	logicalOffset := uint64(0)
+	for index, segment := range segments {
+		if err := ctx.Err(); err != nil {
+			return TailSnapshot{}, fmt.Errorf("read log tail: %w", err)
+		}
+		segmentEnd := logicalOffset + sizes[index]
+		if segmentEnd <= start {
+			logicalOffset = segmentEnd
+			continue
+		}
+		localStart := uint64(0)
+		if start > logicalOffset {
+			localStart = start - logicalOffset
+		}
+		length := sizes[index] - localStart
+		file, err := openPrivateRegularFile(segment.path)
+		if err != nil {
+			return TailSnapshot{}, err
+		}
+		startOffset, err := uint64ToInt64(localStart)
+		if err != nil {
+			_ = file.Close()
+			return TailSnapshot{}, fmt.Errorf("read log tail offset: %w", err)
+		}
+		lengthOffset, err := uint64ToInt64(length)
+		if err != nil {
+			_ = file.Close()
+			return TailSnapshot{}, fmt.Errorf("read log tail length: %w", err)
+		}
+		before := len(result.Data)
+		result.Data = append(result.Data, make([]byte, length)...)
+		_, readErr := io.ReadFull(io.NewSectionReader(file, startOffset, lengthOffset), result.Data[before:])
+		closeErr := file.Close()
+		if readErr != nil {
+			readErr = fmt.Errorf("read %s log tail segment %d: %w", stream, segment.number, readErr)
+		}
+		if closeErr != nil {
+			closeErr = fmt.Errorf("close %s log tail segment %d: %w", stream, segment.number, closeErr)
+		}
+		if err := errors.Join(readErr, closeErr); err != nil {
+			return TailSnapshot{}, err
+		}
+		logicalOffset = segmentEnd
+	}
+	if uint64(len(result.Data)) != selected {
+		return TailSnapshot{}, io.ErrUnexpectedEOF
+	}
+
+	return result, nil
 }
 
 func (reader *Reader) streamBasePath(stream Stream) string {
