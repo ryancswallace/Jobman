@@ -36,6 +36,8 @@ semantic-release.
 
 - Made local and CI linting use the same pinned Linux-targeted command, avoiding
   stale path-sensitive results from the GitHub Actions linter cache.
+- Restored Cloudsmith RPM publication on the free Core plan by authenticating
+  protected release jobs with an environment-scoped API key instead of OIDC.
 
 ## [1.3.0] - 2026-08-04
 

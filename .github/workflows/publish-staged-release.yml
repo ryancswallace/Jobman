@@ -24,7 +24,6 @@ jobs:
     permissions:
       actions: read
       contents: write
-      id-token: write
     environment:
       name: main
       url: https://github.com/ryancswallace/jobman/releases
@@ -217,12 +216,10 @@ jobs:
           git commit -m "jobman ${RELEASE_TAG#v}"
           git push origin HEAD:main
 
-      - name: Authenticate to Cloudsmith with GitHub OIDC
+      - name: Authenticate to Cloudsmith with API key
         uses: cloudsmith-io/cloudsmith-cli-action@db783de9f6e7a445e5e31d94f4210303b48a10a3 # v3.0.1
         with:
-          oidc-audience: https://github.com/ryancswallace
-          oidc-namespace: jobman
-          oidc-service-slug: github-actions-m651
+          api-key: ${{ secrets.CLOUDSMITH_API_KEY }}
           verify-auth: "true"
 
       - name: Publish recovered RPMs to Cloudsmith

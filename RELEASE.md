@@ -114,25 +114,25 @@ and native install evidence in the release workflow.
 
 ## Repository configuration
 
-The workflow uses GitHub's short-lived `GITHUB_TOKEN` for Jobman releases and a
-separate `HOMEBREW_TAP_TOKEN` secret only for the tap update. No GPG private key
-is required. Keep these workflow permissions enabled:
+The workflow uses GitHub's short-lived `GITHUB_TOKEN` for Jobman releases and
+separate `CLOUDSMITH_API_KEY` and `HOMEBREW_TAP_TOKEN` secrets for RPM and
+Homebrew publication. No GPG private key is required. Keep these workflow
+permissions enabled:
 
 - `contents: write` for tags, releases, and assets;
 - `packages: write` for GHCR;
 - `id-token: write` for keyless Sigstore signing;
 - `attestations: write` and `artifact-metadata: write` for provenance.
 
-Cloudsmith publication uses GitHub OIDC rather than a stored API key. In the
-`jobman` Cloudsmith workspace, create a service account whose slug is
-`github-actions-m651`, grant it permission to push only to the `stable`
-repository, and associate it with a GitHub OIDC provider restricted to the
-`ryancswallace/jobman` repository, the protected `main` environment, and the
-default branch. Configure the provider's audience as
-`https://github.com/ryancswallace`; the protected jobs use the subject
-`repo:ryancswallace/jobman:environment:main`. The release, staged-release
-recovery, and manual RPM repair jobs request short-lived credentials for that
-service account. Keep the Cloudsmith repository public and classified as open
+Cloudsmith publication uses a personal API key because the free Cloudsmith Core
+plan does not provide OIDC or service accounts. Create the key under **Personal
+API Keys** for an account that can push to `jobman/stable`, then store it as the
+`CLOUDSMITH_API_KEY` secret in the Jobman repository's protected `main`
+environment. The release, staged-release recovery, and manual RPM repair jobs
+all run under that environment and pass the secret only to the pinned
+Cloudsmith CLI action. Never store or print the key in the repository; replace
+the environment secret immediately whenever the key is refreshed or may have
+been exposed. Keep the Cloudsmith repository public and classified as open
 source.
 
 RPM publication is idempotent. Before uploading, the shared publication script
@@ -389,6 +389,9 @@ bypassing provenance or exact-commit gates for the old tag.
 Before retrying, diagnose the failed publishing stage:
 
 - GHCR failures usually indicate missing package write access;
+- Cloudsmith authentication failures usually indicate that
+  `CLOUDSMITH_API_KEY` is missing, revoked, or owned by an account without push
+  access to `jobman/stable`;
 - signing failures usually indicate missing `id-token: write` permission;
 - a missing `jobman.intoto.jsonl` asset usually indicates that the isolated
   provenance job could not read the release or obtain its OIDC identity;

@@ -72,7 +72,7 @@ func TestReleaseWorkflowsShareProtectedPublicationHelper(t *testing.T) {
 		"name: main",
 		"actions: read",
 		"contents: write",
-		"id-token: write",
+		"api-key: ${{ secrets.CLOUDSMITH_API_KEY }}",
 		"run: ./devel/verify-publish-release.sh",
 		"run: ./devel/publish-cloudsmith-rpms.sh",
 		`PROMOTE_LATEST: "false"`,
@@ -82,10 +82,13 @@ func TestReleaseWorkflowsShareProtectedPublicationHelper(t *testing.T) {
 		}
 	}
 	for _, forbidden := range []string{
+		"id-token: write",
+		"oidc-audience:",
+		"oidc-namespace:",
+		"oidc-service-slug:",
 		"packages: write",
 		"gh release edit",
 		"/releases/tags/",
-		"secrets.CLOUDSMITH",
 	} {
 		if strings.Contains(recoveryWorkflow, forbidden) {
 			t.Errorf("staged-release workflow contains excessive or unsafe operation %q", forbidden)
@@ -164,7 +167,7 @@ func TestReleaseWorkflowRefreshesMainAtDecisionBoundaries(t *testing.T) {
 	}
 }
 
-func TestCloudsmithPublicationIsOIDCAuthenticatedAndRepairable(t *testing.T) {
+func TestCloudsmithPublicationUsesProtectedAPIKeyAndIsRepairable(t *testing.T) {
 	t.Parallel()
 
 	releaseWorkflow := readRepositoryFile(t, "../.github/workflows/release.yml")
@@ -182,13 +185,10 @@ func TestCloudsmithPublicationIsOIDCAuthenticatedAndRepairable(t *testing.T) {
 		"recovery": recoveryWorkflow,
 	} {
 		for _, required := range []string{
-			"id-token: write",
 			"environment:",
 			"name: main",
 			"cloudsmith-io/cloudsmith-cli-action@db783de9f6e7a445e5e31d94f4210303b48a10a3",
-			"oidc-audience: https://github.com/ryancswallace",
-			"oidc-namespace: jobman",
-			"oidc-service-slug: github-actions-m651",
+			"api-key: ${{ secrets.CLOUDSMITH_API_KEY }}",
 			`verify-auth: "true"`,
 			"publish-cloudsmith-rpms.sh",
 		} {
@@ -196,8 +196,25 @@ func TestCloudsmithPublicationIsOIDCAuthenticatedAndRepairable(t *testing.T) {
 				t.Errorf("%s workflow is missing %q", name, required)
 			}
 		}
-		if strings.Contains(contents, "secrets.CLOUDSMITH") {
-			t.Errorf("%s workflow uses a long-lived Cloudsmith secret", name)
+		for _, forbidden := range []string{
+			"oidc-audience:",
+			"oidc-namespace:",
+			"oidc-service-slug:",
+		} {
+			if strings.Contains(contents, forbidden) {
+				t.Errorf("%s workflow contains obsolete Cloudsmith OIDC input %q", name, forbidden)
+			}
+		}
+	}
+	if count := strings.Count(releaseWorkflow, "id-token: write"); count != 2 {
+		t.Errorf("release workflow id-token grant count = %d, want 2", count)
+	}
+	for name, contents := range map[string]string{
+		"repair":   repairWorkflow,
+		"recovery": recoveryWorkflow,
+	} {
+		if strings.Contains(contents, "id-token: write") {
+			t.Errorf("%s workflow retains an unnecessary id-token grant", name)
 		}
 	}
 

@@ -609,7 +609,6 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
-      id-token: write
     environment:
       name: main
       url: https://cloudsmith.io/~jobman/repos/stable/
@@ -624,12 +623,10 @@ jobs:
       - name: Install Cosign
         uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
 
-      - name: Authenticate to Cloudsmith with GitHub OIDC
+      - name: Authenticate to Cloudsmith with API key
         uses: cloudsmith-io/cloudsmith-cli-action@db783de9f6e7a445e5e31d94f4210303b48a10a3 # v3.0.1
         with:
-          oidc-audience: https://github.com/ryancswallace
-          oidc-namespace: jobman
-          oidc-service-slug: github-actions-m651
+          api-key: ${{ secrets.CLOUDSMITH_API_KEY }}
           verify-auth: "true"
 
       - name: Publish verified RPMs
