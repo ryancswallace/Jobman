@@ -38,6 +38,8 @@ func mainWith(execute func() error, stderr io.Writer, exit func(int)) {
 	if err == nil {
 		return
 	}
-	fmt.Fprintln(stderr, err)
+	if jobman.ShouldPrintError(err) {
+		fmt.Fprintln(stderr, err)
+	}
 	exit(jobman.ExitCode(err))
 }

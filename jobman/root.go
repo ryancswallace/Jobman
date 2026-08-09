@@ -22,14 +22,31 @@ type openBackendFunc func(context.Context, string) (app.Backend, error)
 
 type superviseFunc func(context.Context, string, string, io.Reader, io.Writer) error
 
+type extensionInvocation struct {
+	Path   string
+	Args   []string
+	Env    []string
+	Stdin  io.Reader
+	Stdout io.Writer
+	Stderr io.Writer
+}
+
+type runExtensionFunc func(context.Context, extensionInvocation) (int, error)
+
 type dependencies struct {
-	OpenBackend openBackendFunc
-	Supervise   superviseFunc
+	OpenBackend  openBackendFunc
+	Supervise    superviseFunc
+	LookPath     func(string) (string, error)
+	Executable   func() (string, error)
+	Environment  func() []string
+	Getenv       func(string) string
+	RunExtension runExtensionFunc
 }
 
 type rootOptions struct {
-	stateDir   string
-	configPath string
+	stateDir     string
+	configPath   string
+	noExtensions bool
 }
 
 // NewCommand constructs an independent production Jobman command tree. The
@@ -44,11 +61,15 @@ func newRootCommand(dependencies dependencies) *cobra.Command {
 		Short:         "Run and manage background jobs without a shared daemon",
 		Long:          "Jobman starts and manages durable per-user command-line jobs without a continuously running shared daemon.",
 		Version:       buildinfo.Display(),
-		Args:          usageArgs(cobra.NoArgs),
+		Args:          usageArgs(func(_ *cobra.Command, _ []string) error { return nil }),
 		SilenceErrors: true,
 		SilenceUsage:  true,
-		RunE: func(command *cobra.Command, _ []string) error {
-			return command.Help()
+		RunE: func(command *cobra.Command, arguments []string) error {
+			if len(arguments) == 0 {
+				return command.Help()
+			}
+
+			return dispatchExternal(command, dependencies, options, arguments)
 		},
 	}
 	command.SetVersionTemplate("{{.Name}} {{.Version}}\n")
@@ -58,6 +79,13 @@ func newRootCommand(dependencies dependencies) *cobra.Command {
 		"",
 		"override the per-user state directory",
 	)
+	command.PersistentFlags().BoolVar(
+		&options.noExtensions,
+		"no-extensions",
+		false,
+		"disable external command discovery",
+	)
+	command.Flags().SetInterspersed(false)
 	command.PersistentFlags().StringVar(
 		&options.configPath,
 		"config",
@@ -106,10 +134,13 @@ func Execute() error {
 // ExitCode maps a returned command error to Jobman's stable process status.
 func ExitCode(err error) int {
 	var validationError *model.ValidationError
+	var extensionError *extensionExitError
 
 	switch {
 	case err == nil:
 		return 0
+	case errors.As(err, &extensionError):
+		return extensionError.code
 	case errors.Is(err, errUsage):
 		return 2
 	case errors.Is(err, config.ErrInvalid):
@@ -127,6 +158,14 @@ func ExitCode(err error) int {
 	default:
 		return 1
 	}
+}
+
+// ShouldPrintError reports whether the executable boundary should render an
+// error. External children own their own diagnostics and only return status.
+func ShouldPrintError(err error) bool {
+	var silent interface{ Silent() bool }
+
+	return err != nil && (!errors.As(err, &silent) || !silent.Silent())
 }
 
 func openBackend(

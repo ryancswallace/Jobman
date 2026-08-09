@@ -7,6 +7,11 @@ import (
 	"testing"
 )
 
+type testSilentError struct{}
+
+func (testSilentError) Error() string { return "already printed" }
+func (testSilentError) Silent() bool  { return true }
+
 func TestMainWithSuccessAndFailure(t *testing.T) {
 	t.Parallel()
 
@@ -21,6 +26,17 @@ func TestMainWithSuccessAndFailure(t *testing.T) {
 	mainWith(func() error { return want }, &stderr, func(code int) { exitCode = code })
 	if stderr.String() != "failed\n" || exitCode != 1 {
 		t.Fatalf("failed mainWith() stderr/code = %q/%d", stderr.String(), exitCode)
+	}
+}
+
+func TestMainWithSilentFailure(t *testing.T) {
+	t.Parallel()
+
+	var stderr bytes.Buffer
+	exitCode := -1
+	mainWith(func() error { return testSilentError{} }, &stderr, func(code int) { exitCode = code })
+	if stderr.Len() != 0 || exitCode != 1 {
+		t.Fatalf("silent mainWith() stderr/code = %q/%d", stderr.String(), exitCode)
 	}
 }
 
