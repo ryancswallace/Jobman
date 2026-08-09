@@ -8,6 +8,13 @@ semantic-release.
 
 ## [Unreleased]
 
+### Fixed
+
+- Restored Cloudsmith RPM publication on the free Core plan by authenticating
+  protected release jobs with an environment-scoped API key instead of OIDC.
+
+## [1.4.0] - 2026-08-09
+
 ### Added
 
 - Added the standard-library-only `diagnostic` Go package and `jobman show
@@ -36,8 +43,6 @@ semantic-release.
 
 - Made local and CI linting use the same pinned Linux-targeted command, avoiding
   stale path-sensitive results from the GitHub Actions linter cache.
-- Restored Cloudsmith RPM publication on the free Core plan by authenticating
-  protected release jobs with an environment-scoped API key instead of OIDC.
 
 ## [1.3.0] - 2026-08-04
 
@@ -397,7 +402,8 @@ Release version.
 
 [Keep a Changelog]: https://keepachangelog.com/en/1.1.0/
 [Semantic Versioning]: https://semver.org/spec/v2.0.0.html
-[Unreleased]: https://github.com/ryancswallace/jobman/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/ryancswallace/jobman/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/ryancswallace/jobman/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/ryancswallace/jobman/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/ryancswallace/jobman/compare/v1.1.5...v1.2.0
 [1.1.5]: https://github.com/ryancswallace/jobman/compare/v1.1.4...v1.1.5
