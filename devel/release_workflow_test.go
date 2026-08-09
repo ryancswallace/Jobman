@@ -93,6 +93,42 @@ func TestReleaseWorkflowsShareProtectedPublicationHelper(t *testing.T) {
 	}
 }
 
+func TestReleaseVerificationUsesCanonicalRepositoryIdentity(t *testing.T) {
+	t.Parallel()
+
+	const (
+		canonicalIdentity    = "https://github.com/ryancswallace/Jobman/.github/workflows/release.yml@refs/heads/main"
+		noncanonicalIdentity = "https://github.com/ryancswallace/jobman/.github/workflows/release.yml@refs/heads/main"
+	)
+	for _, path := range []string{
+		"../.github/workflows/release.yml",
+		"../.github/workflows/repair-latest.yml",
+		"publish-cloudsmith-rpms.sh",
+		"verify-publish-release.sh",
+		"../RELEASE.md",
+		"../docs/DOGFOOD.md",
+	} {
+		contents := readRepositoryFile(t, path)
+		if !strings.Contains(contents, canonicalIdentity) {
+			t.Errorf("%s is missing canonical certificate identity %q", path, canonicalIdentity)
+		}
+		if strings.Contains(contents, noncanonicalIdentity) {
+			t.Errorf("%s contains case-mismatched certificate identity %q", path, noncanonicalIdentity)
+		}
+	}
+
+	publicationHelper := readRepositoryFile(t, "verify-publish-release.sh")
+	for _, required := range []string{
+		`GITHUB_REPOSITORY" != "ryancswallace/Jobman"`,
+		"--source-uri github.com/ryancswallace/Jobman",
+		"git+https://github.com/ryancswallace/Jobman@refs/heads/main",
+	} {
+		if !strings.Contains(publicationHelper, required) {
+			t.Errorf("release publication helper is missing canonical source identity %q", required)
+		}
+	}
+}
+
 func TestReleaseWorkflowRefreshesMainAtDecisionBoundaries(t *testing.T) {
 	t.Parallel()
 
@@ -447,7 +483,7 @@ exit 0
 set -euo pipefail
 case " $* " in
   *"configSource.uri"*)
-    printf '%s\n' 'git+https://github.com/ryancswallace/jobman@refs/heads/main'
+    printf '%s\n' 'git+https://github.com/ryancswallace/Jobman@refs/heads/main'
     ;;
   *"configSource.digest.sha1"*)
     printf '%s\n' "$EXPECTED_SOURCE_COMMIT"
@@ -473,7 +509,7 @@ esac
 				"FIXTURE_ROOT":           root,
 				"GH_LOG":                 ghLog,
 				"GH_TOKEN":               "test-token",
-				"GITHUB_REPOSITORY":      "ryancswallace/jobman",
+				"GITHUB_REPOSITORY":      "ryancswallace/Jobman",
 				"PATH":                   binDirectory + string(os.PathListSeparator) + os.Getenv("PATH"),
 				"PROMOTE_LATEST":         strconv.FormatBool(testCase.promoteLatest),
 				"RELEASE_TAG":            testCase.tag,

@@ -343,7 +343,7 @@ jobs:
 
           cosign verify \
             --certificate-identity \
-              'https://github.com/ryancswallace/jobman/.github/workflows/release.yml@refs/heads/main' \
+              'https://github.com/ryancswallace/Jobman/.github/workflows/release.yml@refs/heads/main' \
             --certificate-oidc-issuer https://token.actions.githubusercontent.com \
             "${image}@${image_digest}"
           anonymous_config=$(mktemp -d)

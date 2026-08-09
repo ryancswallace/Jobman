@@ -276,7 +276,7 @@ from the same GitHub release. Verify the signature first, then the checksum:
 cosign verify-blob \
   --bundle jobman_<version>_checksums.txt.sigstore.json \
   --certificate-identity \
-    'https://github.com/ryancswallace/jobman/.github/workflows/release.yml@refs/heads/main' \
+    'https://github.com/ryancswallace/Jobman/.github/workflows/release.yml@refs/heads/main' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
   jobman_<version>_checksums.txt
 
@@ -288,7 +288,7 @@ gh attestation verify \
 
 slsa-verifier verify-artifact \
   --provenance-path jobman.intoto.jsonl \
-  --source-uri github.com/ryancswallace/jobman \
+  --source-uri github.com/ryancswallace/Jobman \
   --source-branch main \
   jobman_<version>_linux_amd64.tar.gz
 ```
@@ -316,7 +316,7 @@ For containers, pull an immutable version tag rather than `latest`:
 docker pull ghcr.io/ryancswallace/jobman:<version>
 cosign verify \
   --certificate-identity \
-    'https://github.com/ryancswallace/jobman/.github/workflows/release.yml@refs/heads/main' \
+    'https://github.com/ryancswallace/Jobman/.github/workflows/release.yml@refs/heads/main' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
   ghcr.io/ryancswallace/jobman:<version>
 ```
