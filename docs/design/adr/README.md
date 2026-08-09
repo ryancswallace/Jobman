@@ -9,6 +9,7 @@ ADRs explain how and why the implementation intends to satisfy it.
 | --- | --- | --- |
 | [0001](0001-per-job-supervisor.md) | Accepted | Use one detached supervisor process per active job. |
 | [0002](0002-sqlite-metadata-and-filesystem-logs.md) | Accepted | Use pure-Go SQLite for metadata and private filesystem files for logs. |
+| [0003](0003-external-subcommands.md) | Accepted | Discover optional `jobman-NAME` commands as direct external executables. |
 
 ## Statuses
 

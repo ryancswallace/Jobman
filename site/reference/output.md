@@ -58,8 +58,16 @@ Times use UTC RFC3339 with nanosecond precision when needed. IDs are opaque
 lowercase UUIDv7 strings.
 
 Commands with JSON output include `list --json`, `status --json`,
-`show --json`, and `doctor --json`. `config show` emits effective configuration
-as JSON and can include origins.
+`show --json`, `show evidence --json`, and `doctor --json`. `config show` emits
+effective configuration as JSON and can include origins.
+
+Diagnostic evidence adds a sealed value under `data.evidence`. Its nested
+`kind`, `schema_version`, and `evidence_id` form an independently versioned
+contract. See the [diagnostic evidence guide]({{ site.baseurl }}/guides/diagnosis/)
+for selection, limits, and disclosure behavior.
+Resource observations remain ordinary metadata. Store-local failure
+fingerprints and exact-match summaries use the `local_only` disclosure class
+and appear only when available or explicitly requested with `--similar`.
 
 ## Process exit status
 
@@ -88,3 +96,5 @@ with `logs`; detached targets do not inherit the submitting terminal's output.
 Configured redaction applies to Jobman diagnostics and structured output.
 Captured target stdout and stderr remain raw. Secret references are persisted;
 resolved secret values are not included in the immutable job specification.
+Bounded evidence log tails are copied only when explicitly requested and are
+redacted before the evidence bundle is sealed.

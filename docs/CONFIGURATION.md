@@ -121,7 +121,9 @@ The top-level registries are:
 - `profiles`: explicit ordered overrides, optionally based on a named job spec;
   and
 - `redaction`: extra sensitive field names and bounded RE2 patterns applied to
-  Jobman diagnostics and structured output. Captured target logs remain raw.
+  Jobman diagnostics and structured output. Captured target logs remain raw;
+  when a user explicitly collects a bounded evidence log tail, the configured
+  patterns are applied to copied evidence bytes before sealing.
 
 Select a job spec with `jobman run --job-spec NAME`. Repeat `--profile NAME` to
 apply profiles in command-line order. A direct command after `--` may replace

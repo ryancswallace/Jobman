@@ -1,7 +1,7 @@
 # Persisted schema
 
 Status: implemented, frozen v1 compatibility surface
-Database schema version: 7
+Database schema version: 8
 Job specification schema version: 2
 Log index versions: 1 (unsegmented) and 2 (segmented)
 Specification: [Persistence and concurrency](SPEC.md#7-persistence-and-concurrency)
@@ -56,7 +56,7 @@ broad principals or foreign ownership. See the
 The database uses:
 
 - `PRAGMA application_id = 0x4a4f424d` (`JOBM`);
-- `PRAGMA user_version = 7`; and
+- `PRAGMA user_version = 8`; and
 - one checksum-bearing row per applied version in `schema_migrations`.
 
 Startup rejects a foreign application ID, a newer schema, a missing migration,
@@ -74,13 +74,14 @@ fail-fast guard, not a promise that every third-party synchronization driver is
 detectable; operators must still choose an ordinary local state volume.
 
 Schema 1 is the oldest accepted intermediate database from development of the
-durable implementation. Tagged releases v0.6.0 through v0.9.0 create schema 7;
-no tagged release used schemas 1 through 6 as its final format. Schema 0
-denotes a new, uninitialized database rather than a released persisted format.
-Releases before v0.6.0 were an unrelated prototype and have no supported
-persisted-state migration. The migration suite upgrades schema 1 fixtures
-through every immutable intermediate migration and creates a private backup
-before changing an existing database.
+durable implementation. Tagged releases v0.6.0 through v1.3.0 create schema 7;
+no tagged release used schemas 1 through 6 as its final format. The unreleased
+diagnostic work advances current stores to schema 8. Schema 0 denotes a new,
+uninitialized database rather than a released persisted format. Releases
+before v0.6.0 were an unrelated prototype and have no supported persisted-state
+migration. The migration suite upgrades schema 1 fixtures through every
+immutable intermediate migration and creates a private backup before changing
+an existing database.
 
 ### Migration 1: lifecycle snapshots and events
 
@@ -183,13 +184,53 @@ enqueue time followed by canonical job ID. This makes the persisted index
 match the scheduler's prerequisite-eligibility ordering and deterministic
 tie-break rule.
 
+### Migration 8: diagnostic facts and private failure fingerprints
+
+`store_secrets` contains exactly one 32-byte
+`failure_fingerprint_hmac_v1` key. Jobman creates it from `crypto/rand` after
+the migration transaction and before the store becomes usable. If a process
+stops between those steps, the next open safely creates the missing key while
+no indexed fingerprint exists. A missing key alongside an indexed fingerprint
+is treated as corruption rather than silently rotating identity. A current
+store loads its existing key without taking a writer lock. Invalid or
+additional key rows fail schema verification. The key is part of consistent
+database backups but is never logged, placed in evidence, or exposed by a CLI.
+
+`run_diagnostic_facts` contains optional version-1 post-wait facts for a
+completed run: a JSON array of typed resource observations bounded to 16 KiB,
+a stable
+failure class, and an optional keyed fingerprint. Every resource records its
+metric, integer value, unit, process/tree scope, native source, and
+completeness. The initial supervisor records process-scoped user/system CPU
+time everywhere and process-scoped peak resident memory on Linux and macOS.
+Absence remains valid for old runs, targets that never started, and unsupported
+native metrics.
+
+Failure fingerprints use HMAC-SHA-256 with an independently versioned factual
+input projection. The projection contains lifecycle outcome, stable failure
+class, safe diagnostic/exit/timeout facts, policy disposition, and a separately
+HMACed executable identity. Raw command text, arguments, paths, environment,
+logs, prose, and model output are neither stored in the row nor included
+directly in the exposed value. Successful or factually insufficient runs have
+no fingerprint. The fingerprint is deliberately meaningful only inside its
+own state store.
+
+The partial `run_diagnostic_facts_fingerprint` index supports bounded,
+deterministically ordered exact matches. Resource facts and the fingerprint
+row commit in the same transaction as run completion and policy counters.
+Historical schema-7 failures are not automatically backfilled; evidence marks
+similarity as partially indexed when any older failure in the searched state
+store lacks an indexed fingerprint.
+
 The exact columns, checks, indexes, trigger, and immutable migration text are
 defined by
 [`internal/store/migrations.go`](https://github.com/ryancswallace/jobman/blob/main/internal/store/migrations.go).
 Tests cover initialization, upgrades, concurrent initialization, application
 and version headers, checksums, rollback, compare-and-swap conflicts, capacity,
 fairness and deterministic tie-breaking, runtime-counter repair, pruning
-tombstones, notification claims/retries, and busy-error classification.
+tombstones, notification claims/retries, fingerprint-key recovery, atomic
+diagnostic-fact persistence, indexed similarity privacy/bounds, and busy-error
+classification.
 
 ## Canonical job specification JSON
 

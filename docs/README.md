@@ -6,6 +6,8 @@ The published user and operator manual is available on the
 publication without duplicating their maintained source.
 
 - `design/` records the target product model and architectural constraints.
+- `DIAGNOSTIC_EVIDENCE.md` documents the implemented evidence schema, limits,
+  privacy boundary, and compatibility fixtures.
 - `manpage/` contains release-generated manual pages.
 - `completions/` contains release-generated shell completions.
 

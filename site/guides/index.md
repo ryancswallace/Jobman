@@ -20,5 +20,6 @@ command.
 - [Lifecycle controls]({{ site.baseurl }}/guides/lifecycle/)
 - [Foreground execution and live input]({{ site.baseurl }}/guides/live-input/)
 - [Notifications and secrets]({{ site.baseurl }}/guides/notifications/)
+- [Diagnose a job]({{ site.baseurl }}/guides/diagnosis/)
 - [Containers]({{ site.baseurl }}/guides/containers/)
 - [Common recipes]({{ site.baseurl }}/guides/recipes/)

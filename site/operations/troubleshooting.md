@@ -19,12 +19,24 @@ $ jobman config paths
 $ jobman doctor --json
 $ jobman list --all --json
 $ jobman show --json JOB
+$ jobman show evidence --json JOB
+$ jobman show evidence --similar 5 --json JOB
 ```
+
+The final form performs a bounded exact-match search over newly indexed local
+failure fingerprints. It can distinguish a one-off failure from a recurring
+factual pattern without exposing other jobs' commands or logs.
 
 Include the operating system and architecture, exact command with secret values
 removed, effective configuration source list, observed result, and expected
 result in a bug report. Do not attach raw target logs unless you have reviewed
 them for credentials and private data.
+
+For a cited, read-only interpretation, install the independent
+[`jobman-diagnose` companion](https://github.com/ryancswallace/jobman-diagnose)
+and run `jobman diagnose JOB`. Its default deterministic mode is local and
+network-free. Add `--logs tail` only after deciding that target output is
+appropriate to include.
 
 ## Configuration fails to load
 

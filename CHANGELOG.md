@@ -8,6 +8,30 @@ semantic-release.
 
 ## [Unreleased]
 
+### Added
+
+- Added the standard-library-only `diagnostic` Go package and `jobman show
+  evidence` for bounded, versioned, redacted factual snapshots, including
+  optional direct command/argument vectors, paths, value-free environment-name
+  inventories, effective execution policy, rotated-log tails, and canonical
+  compatibility fixtures. Environment values and secret-reference identifiers
+  remain excluded.
+- Added generic external-command discovery so an explicitly invoked unknown
+  command such as `jobman diagnose` can execute `jobman-diagnose` from `PATH`
+  with built-in precedence, direct argument passing, a versioned environment
+  protocol, nested-dispatch prevention, signal handling, and preserved status.
+- Added typed safe diagnostic records and exact classifications for target
+  lookup, working-directory, permission, timeout, and ownership failures.
+- Added schema 8 diagnostic facts with process-scoped CPU observations,
+  Linux/macOS peak-resident-memory observations, private store-local HMAC
+  failure fingerprints, and bounded opt-in same-fingerprint history.
+
+### Changed
+
+- State stores now migrate forward from schema 7 to schema 8. The migration
+  creates an automatic private backup; older binaries cannot open the migrated
+  store and historical failures are not automatically fingerprinted.
+
 ### Fixed
 
 - Made local and CI linting use the same pinned Linux-targeted command, avoiding

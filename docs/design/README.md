@@ -9,6 +9,18 @@ Implementation is guided by the
 [initial vertical-slice plan](IMPLEMENTATION_PLAN.md) and the indexed
 [architecture decision records](adr/README.md).
 
+A post-v1 extension for deterministic diagnostic evidence and an optional
+independently installed diagnosis companion is described in the
+[diagnostic evidence and diagnosis design](DIAGNOSIS.md). The core evidence,
+offline companion, external-command, resource-observation, fingerprint, and
+similarity slices are implemented on `main` but not yet released. Generated-
+model augmentation remains target design and is not part of the frozen v1
+contract.
+The corresponding
+[diagnosis implementation plan](DIAGNOSIS_IMPLEMENTATION_PLAN.md) divides that
+proposal into independently releasable core, companion, provider, evaluation,
+and enrichment work packages.
+
 The implementation's storage formats and measured portability are recorded
 separately in the [persisted-schema reference](PERSISTED_SCHEMA.md) and
 [platform capability record](PLATFORM_CAPABILITIES.md). The initial vertical

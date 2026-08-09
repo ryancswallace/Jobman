@@ -22,6 +22,38 @@ SLA. Unsupported releases may receive public mitigation advice but should be
 upgraded before a fix is expected. Platform support also requires the native
 release-commit evidence listed in the [platform capability record].
 
+## Diagnostic evidence and external commands
+
+`jobman show evidence` excludes direct commands, paths, and environment names
+by default and always excludes environment values, secret-reference
+identifiers and values, input, notification destinations, and credentials.
+The `--command`, `--paths`, and `--environment-names` controls explicitly admit
+bounded, typed, configured-redaction-aware execution context.
+Log content is collected only with `--logs tail`, is bounded, and is sanitized
+with the configured redactor before the evidence digest is sealed. Target
+output can still contain unknown credentials or malicious instructions; review
+it before exporting or sharing it. Core Jobman does not send evidence to a
+network service.
+
+Core emits `configured_value_redaction_v1` only when a value-aware configured
+redaction rule was active. The optional companion requires this capability in
+addition to explicit profile and CLI approval before projecting log content to
+a generator. It is evidence of policy activation, not a guarantee that target
+output is secret-free.
+
+Failure fingerprints are HMAC-SHA-256 values scoped to one state store. Their
+32-byte key remains inside the private SQLite database and its backups; it is
+never logged or exported. Evidence marks fingerprints and safe cross-job match
+summaries `local_only`. `--similar N` is explicit and returns no job names,
+specifications, paths, environment, logs, or notifier data from matching jobs.
+
+An explicitly named unknown lowercase command can resolve to `jobman-NAME` on
+the caller's `PATH`. Such an extension is native code with the invoking user's
+authority, not a sandboxed plugin. Install only verified extensions, keep
+untrusted directories out of `PATH`, or disable dispatch with
+`--no-extensions` or `JOBMAN_NO_EXTENSIONS=1`. Built-ins cannot be shadowed,
+and help or completion does not discover or execute extensions.
+
 ## Reporting a vulnerability
 
 Do not open a public issue for a suspected vulnerability. Prefer a private

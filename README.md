@@ -44,6 +44,7 @@ notifications without a resident service.
 | Logging | Separate stdout/stderr capture, following, rotation, and retention |
 | Notifications | Named notifiers and event subscriptions with bounded delivery retries |
 | Automation | Stable selectors, versioned JSON output, strict YAML configuration, and shell completions |
+| Diagnostics | Bounded factual evidence plus an optional independently installed diagnosis companion |
 
 > [!NOTE]
 > Jobman is a local, per-user process manager—not a distributed scheduler or
@@ -63,6 +64,18 @@ notifications without a resident service.
 Job selectors accept a full ID, a unique ID prefix of at least eight
 characters, or an unambiguous exact name. Run `jobman COMMAND --help` for all
 options, or browse the [command reference].
+
+`jobman show evidence JOB` exports a model-free diagnostic snapshot, with
+opt-in direct command/argument vectors through `--command`, paths through
+`--paths`, environment variable names through `--environment-names`, bounded
+log tails, and exact store-local failure history through `--similar N`. When the separate
+[`jobman-diagnose` companion] is installed on
+`PATH`, the generic external-command mechanism also makes
+`jobman diagnose JOB` available. Core Jobman remains deterministic and has no
+model or provider dependency. The companion can optionally add
+schema-validated generated hypotheses, but only after explicit profile and
+per-class disclosure selection; deterministic facts and retry advice remain
+authoritative.
 
 See the [configuration reference], [sample configuration], and
 [persisted-schema reference] for more info.
@@ -105,6 +118,7 @@ platform differences are documented in the [platform support reference].
 | Containers | [Container guide][container guide] |
 | Troubleshooting and recovery | [Operations guides] |
 | Architecture | [Design documentation] |
+| Diagnostic evidence | [Evidence schema and privacy reference] |
 | Releases | [Release and artifact verification guide] |
 
 Use the [issue tracker] for reproducible bugs and feature proposals. Report
@@ -130,6 +144,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution requirements.
 [configuration reference]: https://jobman.tech/reference/configuration/
 [container guide]: https://jobman.tech/guides/containers/
 [design documentation]: docs/design/README.md
+[evidence schema and privacy reference]: docs/DIAGNOSTIC_EVIDENCE.md
 [first-job guide]: https://jobman.tech/getting-started/first-job/
 [getting started]: https://jobman.tech/getting-started/
 [install-apk]: https://jobman.tech/getting-started/installation/#install-an-apk-package-on-alpine-linux
@@ -140,6 +155,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution requirements.
 [install-windows]: https://jobman.tech/getting-started/installation/#install-a-windows-zip
 [installation guide]: https://jobman.tech/getting-started/installation/
 [issue tracker]: https://github.com/ryancswallace/jobman/issues
+[jobman-diagnose companion]: https://github.com/ryancswallace/jobman-diagnose
 [operations guides]: https://jobman.tech/operations/
 [persisted-schema reference]: docs/design/PERSISTED_SCHEMA.md
 [platform support reference]: https://jobman.tech/reference/platforms/

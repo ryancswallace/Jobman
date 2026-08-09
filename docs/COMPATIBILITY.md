@@ -7,12 +7,17 @@ fixtures together.
 
 ## Supported public surfaces
 
-The supported product API is the `jobman` command-line interface. The Go
+The supported product API is the `jobman` command-line interface. The root Go
 package intentionally exposes only:
 
 - `NewCommand()`, which constructs an independent production Cobra tree;
 - `Execute()`, the process-global CLI entry point; and
 - `ExitCode(error)`, the stable error-to-process-status mapping.
+
+The separate public `diagnostic` Go package is a standard-library-only data
+contract for sealed evidence schema 1. Its concrete types and documented
+codec functions are supported independently of Jobman's private backend and
+store types.
 
 Backend injection and internal model/store types are private implementation
 seams. They are not a general-purpose Jobman SDK. A future SDK requires its own
@@ -21,7 +26,8 @@ documented, externally implementable types and a separate compatibility review.
 The CLI contract includes documented command and flag names, selector order,
 exit statuses, JSON schema version 1, configuration schema version 1,
 notification event schema version 1, immutable job-spec schema version 2, and
-forward migrations for the SQLite state schema.
+forward migrations for the SQLite state schema. Diagnostic evidence has its
+own `kind` and `schema_version` nested inside the CLI envelope.
 
 ## Command contract
 
@@ -45,6 +51,17 @@ forward migrations for the SQLite state schema.
 - `doctor` is configuration-independent. `--repair` authorizes WAL checkpoint,
   stale lifecycle reconciliation, and due-notification recovery; `--backup`
   writes a new consistent SQLite snapshot.
+- `show evidence JOB` returns a bounded factual snapshot. `--run` and
+  `--all-runs` select run history; log content is absent unless `--logs tail`
+  is explicit; direct command argument vectors, paths, and environment names
+  are absent unless their respective collection flags are explicit. Environment
+  values and secret-reference identifiers remain excluded. Evidence schema 1 item codes
+  may grow additively, so consumers must ignore unknown codes while rejecting
+  unsupported required schemas.
+- An unknown lowercase command can resolve to the exact `jobman-NAME`
+  executable on `PATH`. Built-ins always win. `--no-extensions` and
+  `JOBMAN_NO_EXTENSIONS=1` disable dispatch, and help or completion never
+  enumerates extensions. Extension protocol 1 is documented in ADR-0003.
 
 ## JSON and errors
 
@@ -71,22 +88,24 @@ Stable process statuses are:
 
 Configured redaction applies to Jobman diagnostics and structured output.
 Captured target stdout/stderr is intentionally raw and is never promised to be
-secret-free.
+secret-free. An explicitly requested evidence log tail is sanitized before its
+evidence digest is sealed, but users must still review target output before
+sharing it.
 
 ## State and upgrades
 
 Jobman migrates supported older schemas forward and never silently downgrades.
-Jobman v1.0 writes database schema 7 and directly upgrades intact existing
-schemas 1 through 6 from development of the durable implementation. Tagged
-releases v0.6.0 through v0.9.0 create schema 7, so their intact databases do
-not require a schema conversion when first opened by v1. Schema 0 represents a
-new, uninitialized database rather than a supported historical store. Releases
-before v0.6.0 were an unrelated prototype and have no supported persisted-state
-migration. Opening a noncurrent supported schema first creates a private,
-consistent backup under `STATE_DIR/backups/`; migration aborts if backup
-creation fails. Later release notes state any change to the oldest directly
-supported schema. Restore is an explicit offline operator action described in
-[UPGRADING.md](UPGRADING.md).
+Jobman v1.0 through v1.3 write database schema 7. The unreleased diagnostic
+extension writes schema 8 and directly upgrades intact existing schemas 1
+through 7. Schema 8 adds typed per-run diagnostic facts and one private local
+fingerprint key; it does not backfill historical failures. Schema 0 represents
+a new, uninitialized database rather than a supported historical store.
+Releases before v0.6.0 were an unrelated prototype and have no supported
+persisted-state migration. Opening a noncurrent supported schema first creates
+a private, consistent backup under `STATE_DIR/backups/`; migration aborts if
+backup creation fails. Once schema 8 is written, an older schema-7 binary
+cannot open that state root. Restore is an explicit offline operator action
+described in [UPGRADING.md](UPGRADING.md).
 
 State roots must be local filesystems with working SQLite WAL locking. Known
 network/distributed filesystems are rejected. Cross-host state sharing is not a
