@@ -57,9 +57,13 @@ func TestDiagnosticEvidenceDefaultsToSafeMetadata(t *testing.T) {
 func TestEvidenceCollectorContextProjectionErrorAndLimitPaths(t *testing.T) {
 	t.Parallel()
 
+	workingDirectory := t.TempDir()
 	specification, err := model.NewJobSpec(model.JobSpecInput{
-		Executable: "/usr/bin/tool", Arguments: []string{"--check"}, WorkingDirectory: "/workspace",
-		Name: "context-errors", ExecutionPolicy: model.DefaultExecutionPolicy(),
+		Executable:       filepath.Join(workingDirectory, "tool"),
+		Arguments:        []string{"--check"},
+		WorkingDirectory: workingDirectory,
+		Name:             "context-errors",
+		ExecutionPolicy:  model.DefaultExecutionPolicy(),
 	})
 	if err != nil {
 		t.Fatal(err)

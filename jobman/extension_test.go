@@ -35,13 +35,15 @@ func TestExternalCommandDispatchPreservesBoundariesAndReplacesProtocol(t *testin
 	if stdout != "extension output\n" {
 		t.Fatalf("stdout = %q", stdout)
 	}
-	if invocation.Path != "/extensions/jobman-diagnose" ||
+	wantExtensionPath := cleanAbsoluteTestPath(t, "/extensions/jobman-diagnose")
+	wantCoreExecutable := cleanAbsoluteTestPath(t, "/core/jobman")
+	if invocation.Path != wantExtensionPath ||
 		!reflect.DeepEqual(invocation.Args, []string{"--json", "job name", "--literal=value"}) {
 		t.Fatalf("invocation path/args = %q / %#v", invocation.Path, invocation.Args)
 	}
 	values := environmentMap(invocation.Env)
 	if values["SAFE"] != "value" || values["JOBMAN_EXTENSION_PROTOCOL"] != "1" ||
-		values["JOBMAN_EXECUTABLE"] != "/core/jobman" || values["JOBMAN_STATE_DIR"] != stateDir ||
+		values["JOBMAN_EXECUTABLE"] != wantCoreExecutable || values["JOBMAN_STATE_DIR"] != stateDir ||
 		values["JOBMAN_CONFIG"] != configPath || values["JOBMAN_NO_EXTENSIONS"] != "1" ||
 		values["JOBMAN_VERSION"] == "" {
 		t.Fatalf("extension environment = %#v", values)
@@ -253,6 +255,15 @@ func extensionTestDependencies(t *testing.T, run runExtensionFunc) dependencies 
 		Getenv:       func(string) string { return "" },
 		RunExtension: run,
 	}
+}
+
+func cleanAbsoluteTestPath(t *testing.T, value string) string {
+	t.Helper()
+	absolute, err := filepath.Abs(value)
+	if err != nil {
+		t.Fatalf("filepath.Abs(%q): %v", value, err)
+	}
+	return filepath.Clean(absolute)
 }
 
 func environmentMap(values []string) map[string]string {
