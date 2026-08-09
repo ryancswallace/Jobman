@@ -55,7 +55,7 @@ log-cleanup script, Jobman can replace those pieces with one recorded policy:
 jobman run --name import-data --retries 3 --run-timeout 20m -- ./import-data
 ```
 
-See the [GNU `nohup` manual](https://www.gnu.org/software/coreutils/manual/html_node/nohup-invocation.html)
+See the [GNU `nohup` manual page](https://man7.org/linux/man-pages/man1/nohup.1.html)
 for the exact signal and redirection behavior.
 
 ## Choose tmux when the terminal is part of the work
