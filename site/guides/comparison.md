@@ -55,7 +55,7 @@ log-cleanup script, Jobman can replace those pieces with one recorded policy:
 jobman run --name import-data --retries 3 --run-timeout 20m -- ./import-data
 ```
 
-See the [GNU `nohup` manual](https://www.gnu.org/software/coreutils/manual/html_node/nohup-invocation.html)
+See the [GNU `nohup` manual page](https://man7.org/linux/man-pages/man1/nohup.1.html)
 for the exact signal and redirection behavior.
 
 ## Choose tmux when the terminal is part of the work
@@ -102,9 +102,10 @@ macOS, and Windows, do not want to define or operate service-manager policy,
 and value a job-oriented CLI with immutable retry, timeout, log, dependency,
 and notification settings.
 
-Read systemd's official documentation for
-[`systemd-run`](https://www.freedesktop.org/software/systemd/man/latest/systemd-run.html),
-[transient-unit settings](https://systemd.io/TRANSIENT-SETTINGS/), and the
+Read the
+[`systemd-run` manual page](https://man7.org/linux/man-pages/man1/systemd-run.1.html),
+systemd's [transient-unit settings](https://systemd.io/TRANSIENT-SETTINGS/),
+and the
 [transient control-group interface](https://systemd.io/CONTROL_GROUP_INTERFACE/)
 before choosing unit properties or user-session behavior.
 

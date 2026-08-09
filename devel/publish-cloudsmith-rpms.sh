@@ -48,7 +48,7 @@ bundle=${manifest}.sigstore.json
 cosign verify-blob \
   --bundle "${bundle}" \
   --certificate-identity \
-    'https://github.com/ryancswallace/jobman/.github/workflows/release.yml@refs/heads/main' \
+    'https://github.com/ryancswallace/Jobman/.github/workflows/release.yml@refs/heads/main' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
   "${manifest}"
 
