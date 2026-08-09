@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ryancswallace/jobman/diagnostic"
 	"github.com/ryancswallace/jobman/internal/app"
 	"github.com/ryancswallace/jobman/internal/config"
 	"github.com/ryancswallace/jobman/internal/liveinput"
@@ -47,6 +48,8 @@ type fakeBackend struct {
 	configured      int
 	listRequest     *app.ListRequest
 	doctorRequest   *app.DoctorRequest
+	evidenceRequest *diagnostic.EvidenceRequest
+	evidence        diagnostic.Evidence
 }
 
 func (backend *fakeBackend) ConfigureInvocation(config.Config) { backend.configured++ }
@@ -109,6 +112,32 @@ func (backend *fakeBackend) Doctor(_ context.Context, request app.DoctorRequest)
 	return app.DoctorReport{Store: store.HealthReport{
 		Healthy: true, SchemaVersion: 7, SupportedSchema: 7, SQLiteVersion: "3.51.3",
 	}}, nil
+}
+
+func (backend *fakeBackend) DiagnosticEvidence(
+	_ context.Context,
+	request diagnostic.EvidenceRequest,
+	sanitizer diagnostic.Sanitizer,
+) (diagnostic.Evidence, error) {
+	if backend.operationErr != nil {
+		return diagnostic.Evidence{}, backend.operationErr
+	}
+	backend.evidenceRequest = &request
+	value := backend.evidence
+	if len(value.Artifacts) > 0 && sanitizer != nil {
+		value.Artifacts = slices.Clone(value.Artifacts)
+		for index := range value.Artifacts {
+			value.Artifacts[index].Data = slices.Clone(value.Artifacts[index].Data)
+			value.Artifacts[index].Data, _ = sanitizer.Sanitize("run.log."+value.Artifacts[index].Stream, value.Artifacts[index].Data)
+		}
+		var err error
+		value, err = diagnostic.Seal(value)
+		if err != nil {
+			return diagnostic.Evidence{}, err
+		}
+	}
+
+	return value, nil
 }
 
 func (backend *fakeBackend) Inspect(context.Context, string) (app.JobDetails, error) {

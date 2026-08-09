@@ -1,21 +1,27 @@
 package jobman
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"text/tabwriter"
 	"time"
 
 	"github.com/spf13/cobra"
 
+	"github.com/ryancswallace/jobman/diagnostic"
 	"github.com/ryancswallace/jobman/internal/app"
+	"github.com/ryancswallace/jobman/internal/config"
 	"github.com/ryancswallace/jobman/internal/model"
 	"github.com/ryancswallace/jobman/internal/store"
 )
 
 func newShowCommand(dependencies dependencies, root *rootOptions) *cobra.Command {
 	var jsonOutput bool
+	evidenceCommand := newShowEvidenceCommand(dependencies, root, &jsonOutput)
 	runCommand := &cobra.Command{
 		Use:   "run JOB RUN",
 		Short: "Show one run by number or negative index",
@@ -46,11 +52,169 @@ func newShowCommand(dependencies dependencies, root *rootOptions) *cobra.Command
 	command.PersistentFlags().BoolVar(&jsonOutput, "json", false, "emit versioned JSON")
 	command.ValidArgsFunction = jobIDArgumentCompletion(dependencies, root)
 	command.AddCommand(
+		evidenceCommand,
 		jobCommand,
 		runCommand,
 	)
 
 	return command
+}
+
+func newShowEvidenceCommand(
+	dependencies dependencies,
+	root *rootOptions,
+	jsonOutput *bool,
+) *cobra.Command {
+	request := diagnostic.EvidenceRequest{Logs: diagnostic.LogsMetadata}
+	command := &cobra.Command{
+		Use:   "evidence JOB",
+		Short: "Collect bounded diagnostic evidence for a job",
+		Args:  usageArgs(cobra.ExactArgs(1)),
+		RunE: func(command *cobra.Command, arguments []string) error {
+			request.Selector = arguments[0]
+			if flagChanged(command, "run") && request.Run == 0 {
+				return usageError(errors.New("--run must be a nonzero run number or negative index"))
+			}
+			return showEvidence(command, dependencies, root, request, *jsonOutput)
+		},
+	}
+	command.Flags().Int64Var(&request.Run, "run", 0, "select a run number or negative index")
+	command.Flags().BoolVar(&request.AllRuns, "all-runs", false, "select the bounded run history")
+	command.Flags().BoolVar(
+		&request.IncludeCommand,
+		"command",
+		false,
+		"include direct executable identities and ordered arguments",
+	)
+	command.Flags().BoolVar(&request.IncludePaths, "paths", false,
+		"include working directories, configured paths, and resolved executables")
+	command.Flags().BoolVar(&request.IncludeEnvironmentNames, "environment-names", false,
+		"include environment variable names and roles, never values")
+	command.Flags().Var(newEvidenceLogModeValue(&request.Logs), "logs", "collect logs as metadata, tail, or none")
+	byteSizeFlag(command.Flags(), &request.LogBytes, "log-bytes", "maximum bytes per selected log stream")
+	command.Flags().Uint64Var(&request.Similar, "similar", 0, "request up to N same-fingerprint histories")
+	command.ValidArgsFunction = jobIDArgumentCompletion(dependencies, root)
+
+	return command
+}
+
+type evidenceLogModeValue diagnostic.LogMode
+
+func newEvidenceLogModeValue(target *diagnostic.LogMode) *evidenceLogModeValue {
+	return (*evidenceLogModeValue)(target)
+}
+
+func (value *evidenceLogModeValue) Set(encoded string) error {
+	mode := diagnostic.LogMode(strings.ToLower(strings.TrimSpace(encoded)))
+	switch mode {
+	case diagnostic.LogsMetadata, diagnostic.LogsTail, diagnostic.LogsNone:
+		*value = evidenceLogModeValue(mode)
+		return nil
+	default:
+		return errors.New("must be metadata, tail, or none")
+	}
+}
+
+func (value *evidenceLogModeValue) String() string {
+	if value == nil {
+		return ""
+	}
+
+	return string(*value)
+}
+
+func (*evidenceLogModeValue) Type() string { return "log-mode" }
+
+func showEvidence(
+	command *cobra.Command,
+	dependencies dependencies,
+	root *rootOptions,
+	request diagnostic.EvidenceRequest,
+	jsonOutput bool,
+) error {
+	return withLoadedBackend(command, dependencies, root, func(backend app.Backend, _ config.Loaded) error {
+		diagnostics, ok := backend.(app.DiagnosticBackend)
+		if !ok {
+			return errors.New("application backend does not support diagnostic evidence")
+		}
+		evidence, err := diagnostics.DiagnosticEvidence(
+			command.Context(), request, commandEvidenceSanitizer{redactor: commandRedactor(command)},
+		)
+		if err != nil {
+			return err
+		}
+		if jsonOutput {
+			return writeEvidenceJSON(command, evidence)
+		}
+
+		return writeEvidenceSummary(command, evidence)
+	})
+}
+
+type commandEvidenceSanitizer struct{ redactor *config.Redactor }
+
+func (sanitizer commandEvidenceSanitizer) Sanitize(field string, value []byte) ([]byte, bool) {
+	redacted := []byte(sanitizer.redactor.RedactField(field, string(value)))
+
+	return redacted, !bytes.Equal(redacted, value)
+}
+
+func (sanitizer commandEvidenceSanitizer) ValueRedactionConfigured() bool {
+	return sanitizer.redactor.ProtectsValues()
+}
+
+func writeEvidenceJSON(command *cobra.Command, evidence diagnostic.Evidence) error {
+	if err := diagnostic.Verify(evidence); err != nil {
+		return fmt.Errorf("verify diagnostic evidence: %w", err)
+	}
+	encoder := json.NewEncoder(command.OutOrStdout())
+	encoder.SetEscapeHTML(false)
+	if err := encoder.Encode(struct {
+		SchemaVersion int `json:"schema_version"`
+		Data          struct {
+			Evidence diagnostic.Evidence `json:"evidence"`
+		} `json:"data"`
+	}{SchemaVersion: 1, Data: struct {
+		Evidence diagnostic.Evidence `json:"evidence"`
+	}{Evidence: evidence}}); err != nil {
+		return fmt.Errorf("encode diagnostic evidence: %w", err)
+	}
+
+	return nil
+}
+
+func writeEvidenceSummary(command *cobra.Command, evidence diagnostic.Evidence) error {
+	writer := tabwriter.NewWriter(command.OutOrStdout(), 0, 4, 2, ' ', 0)
+	selected := make([]string, 0, len(evidence.Subject.SelectedRuns))
+	for _, run := range evidence.Subject.SelectedRuns {
+		selected = append(selected, strconv.FormatUint(run, 10))
+	}
+	if len(selected) == 0 {
+		selected = append(selected, "none")
+	}
+	fields := [][2]string{
+		{"Evidence ID", evidence.EvidenceID},
+		{"Evidence schema", strconv.Itoa(evidence.SchemaVersion)},
+		{"Job", evidence.Subject.JobID},
+		{"State", strings.TrimSpace(evidence.Subject.Phase + " " + evidence.Subject.Outcome)},
+		{"Selected runs", strings.Join(selected, ", ")},
+		{"Facts", strconv.FormatUint(evidence.Limits.ItemCount, 10)},
+		{"Artifacts", strconv.FormatUint(evidence.Limits.ArtifactCount, 10)},
+		{"Log bytes", strconv.FormatUint(evidence.Limits.LogBytes, 10)},
+		{"Omissions", strconv.Itoa(len(evidence.Omissions))},
+		{"Redactions", strconv.Itoa(len(evidence.RedactionNotices))},
+		{"Artifact consistency", string(evidence.Consistency.Artifacts)},
+	}
+	for _, field := range fields {
+		if _, err := fmt.Fprintf(writer, "%s:\t%s\n", field[0], field[1]); err != nil {
+			return fmt.Errorf("write diagnostic evidence summary: %w", err)
+		}
+	}
+	if err := writer.Flush(); err != nil {
+		return fmt.Errorf("flush diagnostic evidence summary: %w", err)
+	}
+
+	return nil
 }
 
 func exactRunSelectorArgs(command *cobra.Command, arguments []string) error {
