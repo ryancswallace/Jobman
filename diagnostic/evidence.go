@@ -16,7 +16,7 @@ const (
 	Kind = "jobman.diagnostic_evidence"
 	// SchemaVersion is the newest evidence schema understood by this package.
 	SchemaVersion = 1
-	// CollectorVersion identifies the initial core evidence collector semantics.
+	// CollectorVersion identifies the schema-1 core evidence collector semantics.
 	CollectorVersion = "1.0.0"
 )
 
@@ -191,9 +191,13 @@ type EvidenceRequest struct {
 	// and inheritance/set/unset/secret-reference roles, never values or secret
 	// reference identifiers.
 	IncludeEnvironmentNames bool
-	Logs                    LogMode
-	LogBytes                uint64
-	Similar                 uint64
+	// IncludeSystem explicitly requests bounded point-in-time host capacity,
+	// cgroup, and container context. It never collects system logs, hostnames,
+	// cgroup paths, process lists, or environment values.
+	IncludeSystem bool
+	Logs          LogMode
+	LogBytes      uint64
+	Similar       uint64
 }
 
 // LogMode selects bounded target-log evidence.

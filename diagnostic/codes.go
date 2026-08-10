@@ -80,6 +80,7 @@ const (
 	CodeFailureFingerprint        = "jobman.failure.fingerprint"
 	CodeSimilarFailure            = "jobman.failure.similar"
 	CodeResourceObservation       = "jobman.resource.observation"
+	CodeSystemContext             = "jobman.system.context"
 )
 
 // Core omission codes.
@@ -107,6 +108,8 @@ const (
 	OmissionPathLimitExceeded             = "path_context_limit_exceeded"
 	OmissionEnvironmentNamesNotRequested  = "environment_names_not_requested"
 	OmissionEnvironmentNamesLimitExceeded = "environment_names_limit_exceeded"
+	OmissionSystemContextNotRequested     = "system_context_not_requested"
+	OmissionSystemContextUnavailable      = "system_context_unavailable"
 )
 
 // Artifact roles.

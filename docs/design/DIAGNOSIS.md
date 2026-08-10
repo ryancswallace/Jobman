@@ -1,13 +1,13 @@
 # Diagnostic evidence and optional diagnosis companion
 
-Status: implemented post-v1 extension; unreleased
+Status: initial implementation released in Jobman v1.4.0 and Jobman Diagnose v0.1.0
 Contract status: core evidence, deterministic companion, external dispatch,
 resource observations, failure fingerprints, exact similar history, generated
 augmentation, and the initial provider adapters are implemented in the
 coordinated repositories. Selected-artifact exact-range enrichment, offline
-evaluation, and private support bundles are also implemented. Live provider
-release-candidate evaluation and the first signed release remain gates; none
-of this changes the frozen v1 specification.
+evaluation, and private support bundles are also implemented. Provider support
+remains subject to the recorded and live evaluation gates for each release;
+none of this changes the frozen v1 specification.
 Last updated: 2026-08-09
 
 Implementation sequencing, work packages, compatibility gates, and release
@@ -453,6 +453,13 @@ metrics are omitted with a capability fact; zero is never used to mean
 unavailable. Platform adapters must distinguish a process-only measurement
 from a whole-tree measurement.
 
+The implemented `--system` evidence option supplements durable per-run facts
+with a bounded point-in-time observation of the collector host: capacity for
+the filesystem containing Jobman's state and allowlisted Linux cgroup-v2
+memory, PID, and cumulative OOM counters. It excludes identifiers and free-form
+host data. This observation is not transactionally aligned with the run and
+does not attribute shared, cumulative cgroup events to one process.
+
 Confirmed Linux control-group memory events, container runtime reasons, macOS
 process information, or Windows Job Object limit events may support an exact
 resource classification. Exit-code conventions and free-form log text alone do
@@ -549,6 +556,8 @@ The collector creates items for:
   outcome;
 - relevant immutable lifecycle events in occurrence order;
 - Jobman version, platform, and applicable capability facts; and
+- explicitly requested, bounded collector-host filesystem and cgroup
+  constraints with point-in-time quality; and
 - requested bounded log artifacts and their capture quality.
 
 Command arguments, environment values, paths, and log text are not ordinary

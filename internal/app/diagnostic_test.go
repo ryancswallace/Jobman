@@ -40,7 +40,8 @@ func TestDiagnosticEvidenceDefaultsToSafeMetadata(t *testing.T) {
 		t.Fatalf("artifacts = %#v, consistency = %q", evidence.Artifacts, evidence.Consistency.Artifacts)
 	}
 	if !hasEvidenceCode(evidence, diagnostic.CodeFailureClass) ||
-		!hasOmission(evidence, diagnostic.OmissionLogContentNotRequested) {
+		!hasOmission(evidence, diagnostic.OmissionLogContentNotRequested) ||
+		!hasOmission(evidence, diagnostic.OmissionSystemContextNotRequested) {
 		t.Fatalf("evidence lacks failure class or log omission: %#v", evidence)
 	}
 	encoded, err := json.Marshal(evidence)
@@ -117,6 +118,22 @@ func TestEvidenceCollectorContextProjectionErrorAndLimitPaths(t *testing.T) {
 	}
 	if got := diagnosticLogRetention(model.ExecutionPolicy{LogRetentionUnlimited: true}); got != "unlimited" {
 		t.Fatalf("diagnosticLogRetention(unlimited) = %q", got)
+	}
+}
+
+func TestEvidenceCollectorReportsUnavailableSystemContext(t *testing.T) {
+	t.Parallel()
+
+	collector := &evidenceCollector{
+		service: &Service{}, encodeValue: diagnostic.JSONValue,
+		evidence:  diagnostic.Evidence{Items: []diagnostic.Item{}},
+		omissions: make(map[string]map[string]struct{}),
+	}
+	if err := collector.collectSystem(); err != nil {
+		t.Fatalf("collectSystem() error = %v", err)
+	}
+	if collector.omissions[diagnostic.OmissionSystemContextUnavailable] == nil || len(collector.evidence.Items) != 0 {
+		t.Fatalf("system context collection = omissions %#v, items %#v", collector.omissions, collector.evidence.Items)
 	}
 }
 
@@ -641,7 +658,7 @@ func TestEvidenceCollectorProjectsRichSnapshot(t *testing.T) {
 	)
 	if collectErr := collector.collect(t.Context(), diagnostic.EvidenceRequest{
 		Selector: jobID.String(), AllRuns: true, Logs: diagnostic.LogsMetadata, Similar: 1,
-		IncludeCommand: true, IncludePaths: true, IncludeEnvironmentNames: true,
+		IncludeCommand: true, IncludePaths: true, IncludeEnvironmentNames: true, IncludeSystem: true,
 	}); collectErr != nil {
 		t.Fatalf("collect() error = %v", collectErr)
 	}
@@ -651,6 +668,11 @@ func TestEvidenceCollectorProjectsRichSnapshot(t *testing.T) {
 	}
 	if err := diagnostic.Verify(evidence); err != nil {
 		t.Fatalf("Verify() error = %v", err)
+	}
+	if !hasEvidenceCode(evidence, diagnostic.CodeSystemContext) ||
+		hasOmission(evidence, diagnostic.OmissionSystemContextNotRequested) ||
+		hasOmission(evidence, diagnostic.OmissionSystemContextUnavailable) {
+		t.Fatalf("rich evidence lacks collected system context: %#v", evidence)
 	}
 	for _, code := range []string{
 		diagnostic.CodeSourceContext, diagnostic.CodeTargetCommand, diagnostic.CodeTargetWorkingDirectory,

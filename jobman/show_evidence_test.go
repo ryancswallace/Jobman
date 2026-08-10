@@ -24,7 +24,7 @@ func TestShowEvidenceJSONUsesDedicatedVerifiedEnvelope(t *testing.T) {
 	backend.evidence = testEvidence(t, nil)
 	stdout, err := executeCommand(t, dependenciesFor(backend), []string{
 		"show", "evidence", "--run", "-1", "--logs", "tail", "--log-bytes", "8KiB",
-		"--similar", "2", "--command", "--paths", "--environment-names", "--json", testJobID,
+		"--similar", "2", "--command", "--paths", "--environment-names", "--system", "--json", testJobID,
 	})
 	if err != nil {
 		t.Fatalf("show evidence error = %v", err)
@@ -32,7 +32,8 @@ func TestShowEvidenceJSONUsesDedicatedVerifiedEnvelope(t *testing.T) {
 	if backend.evidenceRequest == nil || backend.evidenceRequest.Run != -1 ||
 		backend.evidenceRequest.Logs != diagnostic.LogsTail || backend.evidenceRequest.LogBytes != 8<<10 ||
 		backend.evidenceRequest.Similar != 2 || !backend.evidenceRequest.IncludeCommand ||
-		!backend.evidenceRequest.IncludePaths || !backend.evidenceRequest.IncludeEnvironmentNames {
+		!backend.evidenceRequest.IncludePaths || !backend.evidenceRequest.IncludeEnvironmentNames ||
+		!backend.evidenceRequest.IncludeSystem {
 		t.Fatalf("evidence request = %#v", backend.evidenceRequest)
 	}
 	var envelope struct {

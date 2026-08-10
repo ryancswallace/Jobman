@@ -1,6 +1,7 @@
 # Diagnostic evidence schema 1
 
-Status: implemented on `main`; not yet released
+Status: schema 1 released in v1.4.0; additive system-context collection is
+implemented on `main`
 
 Jobman can export a bounded, immutable snapshot of factual job observations
 without interpreting target output or contacting a model:
@@ -9,6 +10,7 @@ without interpreting target output or contacting a model:
 jobman show evidence JOB
 jobman show evidence --json JOB
 jobman show evidence --command --json JOB
+jobman show evidence --system --json JOB
 jobman show evidence --logs tail --log-bytes 64KiB --json JOB
 jobman show evidence --similar 5 --json JOB
 ```
@@ -44,6 +46,7 @@ The current hard limits are:
 | Direct command | not collected | 128 KiB and 1,024 arguments per command item |
 | Path | not collected | 4 KiB per path item |
 | Environment names | not collected | 2,048 names per item; values are never collected |
+| System context | not collected | one allowlisted point-in-time item |
 | Requested tail | 64 KiB per selected stream | 1 MiB per selected stream, subject to the bundle limit |
 | Similar histories | not requested | 20 exact store-local fingerprint matches |
 | Public decoder input | 2 MiB | 2 MiB unless a caller selects a smaller positive limit |
@@ -56,6 +59,10 @@ truncated domain produces an omission rather than silently disappearing.
 including ordered argument vectors. `--paths` opts into filesystem context,
 and `--environment-names` opts into names and set/unset/secret-backed roles;
 environment values and secret-reference identifiers are never collected.
+`--system` opts into capacity for the filesystem containing Jobman's state and,
+on Linux cgroup v2, allowlisted memory, PID, and cumulative OOM counters plus a
+controlled container hint. It does not collect mount paths, cgroup paths,
+hostnames, process lists, system logs, or arbitrary host configuration.
 
 ## Envelope and identity
 
@@ -156,6 +163,7 @@ are schema-1 objects containing only `code`, `origin`, `operation`, `category`,
 | `jobman.lifecycle.event` | object | Durable transition type, entity, phases, outcomes, optional run ID, and typed safe transition details |
 | `jobman.failure.class` | `{class, scope}` | Deterministic low-level classification from durable result and safe diagnostic code |
 | `jobman.resource.observation` | `{metric, value, unit, scope, source, completeness}` | Typed post-wait process accounting persisted atomically with run completion |
+| `jobman.system.context` | `{scope, filesystem?, linux_cgroup?, container_hint?}` | Opt-in point-in-time constraints for the collector host; the filesystem scope is Jobman's state filesystem, Linux cgroup-v2 counters describe Jobman's containing cgroup, and disclosure is `metadata` |
 | `jobman.failure.fingerprint` | `{algorithm, input_schema_version, value, scope}` | Opaque HMAC-SHA-256 grouping key over a versioned safe factual projection; disclosure is `local_only` |
 | `jobman.failure.similar` | safe similar-run summary | Exact indexed fingerprint match containing only job/run IDs, run number, completion time, outcome, failure class, fingerprint, and whether a later run succeeded; disclosure is `local_only` |
 
@@ -165,6 +173,14 @@ memory in bytes on Linux and macOS. Unsupported or inapplicable facts are
 omitted, never represented as zero merely to fill a field. In particular,
 Jobman does not call exit 137 an out-of-memory kill without a confirming
 platform observation.
+
+System context is deliberately different from per-run resource observations.
+It is captured after the transactional job snapshot and has
+`point_in_time` quality. A target normally inherits Jobman's cgroup, but the
+group may contain other processes and `memory.events` counters are cumulative.
+Those counters can support a hypothesis, but cannot by themselves prove that
+the selected run caused an OOM event. The collector therefore does not turn
+them into a deterministic OOM classification.
 
 Fingerprints are keyed with one random 32-byte secret held in the private
 SQLite store. The safe input projection includes outcome, stable failure
@@ -218,7 +234,9 @@ omitted by default; `--command` collects bounded target, wait-probe, and command
 notifier specifications and applies configured redaction to every field.
 `--paths` independently collects bounded working directories, stdin/wait
 paths, and per-run resolved executables. `--environment-names` collects only
-variable names and whether each is set, unset, or secret-backed. Redaction notices
+variable names and whether each is set, unset, or secret-backed. `--system`
+collects only the bounded allowlist described above and produces an explicit
+not-requested or unavailable omission when absent. Redaction notices
 identify affected evidence IDs and counts without retaining the original
 values or matching patterns.
 

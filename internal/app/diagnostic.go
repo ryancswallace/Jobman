@@ -20,6 +20,7 @@ import (
 	"github.com/ryancswallace/jobman/internal/model"
 	"github.com/ryancswallace/jobman/internal/policy"
 	"github.com/ryancswallace/jobman/internal/store"
+	"github.com/ryancswallace/jobman/internal/systemcontext"
 )
 
 const (
@@ -218,7 +219,7 @@ func newEvidenceCollector(
 		"diagnostic_records_v1", "failure_fingerprints_v1", "lifecycle_events",
 		"log_metadata", "log_tail", "notification_history", "resource_observations_v1",
 		"execution_context_v1", "execution_policy_v1", "similar_history_v1",
-		"transactional_snapshot", "wait_evaluations",
+		"system_context_v1", "transactional_snapshot", "wait_evaluations",
 	}
 	if reporter, ok := sanitizer.(diagnostic.ValueRedactionReporter); ok && reporter.ValueRedactionConfigured() {
 		capabilities = append(capabilities, "configured_value_redaction_v1")
@@ -273,6 +274,11 @@ func (collector *evidenceCollector) collect(ctx context.Context, request diagnos
 			return err
 		}
 	}
+	if request.IncludeSystem {
+		if err := collector.collectSystem(); err != nil {
+			return err
+		}
+	}
 	for _, run := range collector.snapshot.Runs {
 		if err := collector.collectRun(run, request.Logs != diagnostic.LogsNone); err != nil {
 			return err
@@ -308,6 +314,24 @@ func (collector *evidenceCollector) collect(ctx context.Context, request diagnos
 	collector.addCollectionOmissions(request)
 
 	return nil
+}
+
+func (collector *evidenceCollector) collectSystem() error {
+	value := systemcontext.Observe(collector.service.stateDir)
+	if valid := value.Validate() == nil; !valid {
+		collector.omit(diagnostic.OmissionSystemContextUnavailable, "system_context")
+
+		return nil
+	}
+
+	return collector.add(
+		"ev:system:context",
+		diagnostic.CodeSystemContext,
+		value,
+		nil,
+		diagnostic.ItemSource{Kind: "system_probe"},
+		diagnostic.QualityPointInTime,
+	)
 }
 
 func (collector *evidenceCollector) collectCommands() error {
@@ -1248,6 +1272,9 @@ func (collector *evidenceCollector) addCollectionOmissions(request diagnostic.Ev
 	}
 	if !request.IncludeEnvironmentNames {
 		collector.omit(diagnostic.OmissionEnvironmentNamesNotRequested, "environment_names")
+	}
+	if !request.IncludeSystem {
+		collector.omit(diagnostic.OmissionSystemContextNotRequested, "system_context")
 	}
 	if request.Logs == diagnostic.LogsNone {
 		collector.omit(diagnostic.OmissionLogContentNotRequested, "logs")

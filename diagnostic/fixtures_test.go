@@ -17,6 +17,8 @@ import (
 
 const fixtureSecretCanary = "JOBMAN_DIAG_SECRET_CANARY_7f84d1" // #nosec G101 -- Deliberate non-secret fixture sentinel.
 
+const fixtureCollectorVersion = "1.0.0"
+
 var fixtureTime = time.Date(2026, 8, 9, 12, 0, 0, 0, time.UTC)
 
 func TestEvidenceFixtures(t *testing.T) {
@@ -155,7 +157,7 @@ func fixtureBase(phase, outcome string, runs []uint64, artifacts ArtifactConsist
 	return Evidence{
 		CapturedAt: fixtureTime,
 		Source: Source{
-			JobmanVersion: "1.4.0-dev", CollectorVersion: CollectorVersion,
+			JobmanVersion: "1.4.0-dev", CollectorVersion: fixtureCollectorVersion,
 			StoreSchemaVersion: 8, Platform: "linux",
 			Capabilities: []string{
 				"diagnostic_records_v1", "failure_fingerprints_v1", "log_metadata", "log_tail",

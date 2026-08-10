@@ -90,6 +90,8 @@ func newShowEvidenceCommand(
 		"include working directories, configured paths, and resolved executables")
 	command.Flags().BoolVar(&request.IncludeEnvironmentNames, "environment-names", false,
 		"include environment variable names and roles, never values")
+	command.Flags().BoolVar(&request.IncludeSystem, "system", false,
+		"include bounded point-in-time filesystem and cgroup constraints")
 	command.Flags().Var(newEvidenceLogModeValue(&request.Logs), "logs", "collect logs as metadata, tail, or none")
 	byteSizeFlag(command.Flags(), &request.LogBytes, "log-bytes", "maximum bytes per selected log stream")
 	command.Flags().Uint64Var(&request.Similar, "similar", 0, "request up to N same-fingerprint histories")

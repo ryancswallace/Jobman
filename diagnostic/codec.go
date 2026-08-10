@@ -337,6 +337,10 @@ func validateContextItems(items []Item) error {
 			if err := validateExecutionPolicyItem(item); err != nil {
 				return err
 			}
+		case CodeSystemContext:
+			if err := validateSystemContextItem(item); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -389,6 +393,16 @@ func validateResourceItem(item Item) error {
 	if err := decodeKnownValue(item.Value, &observation); err != nil || observation.Validate() != nil ||
 		item.Quality != QualityObserved || item.Disclosure != DisclosureMetadata {
 		return fmt.Errorf("validate evidence: invalid resource observation %q", item.ID)
+	}
+
+	return nil
+}
+
+func validateSystemContextItem(item Item) error {
+	var context SystemContext
+	if err := decodeKnownValue(item.Value, &context); err != nil || context.Validate() != nil ||
+		item.Quality != QualityPointInTime || item.Disclosure != DisclosureMetadata {
+		return fmt.Errorf("validate evidence: invalid system context %q", item.ID)
 	}
 
 	return nil
