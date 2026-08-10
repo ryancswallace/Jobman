@@ -22,9 +22,9 @@ with a newer binary, review the release notes and the
 | Environment | Recommended for most users | Other supported methods |
 | --- | --- | --- |
 | macOS | [Homebrew](#install-with-homebrew-on-macos) | Portable `.tar.gz`, Go toolchain, source |
-| Fedora, RHEL, CentOS Stream, Rocky Linux, AlmaLinux, Amazon Linux | [Signed RPM repository](#install-from-the-rpm-repository) | Downloaded `.rpm`, portable `.tar.gz`, Go toolchain, source |
-| Debian or Ubuntu | [Downloaded `.deb` package](#install-a-deb-package-on-debian-or-ubuntu) | Portable `.tar.gz`, Go toolchain, source |
-| Alpine Linux | [Downloaded `.apk` package](#install-an-apk-package-on-alpine-linux) | Portable `.tar.gz`, Go toolchain, source |
+| Fedora, RHEL, CentOS Stream, Rocky Linux, AlmaLinux, Amazon Linux | [Cloudsmith RPM repository](#install-from-the-rpm-repository) | Downloaded `.rpm`, portable `.tar.gz`, Go toolchain, source |
+| Debian or Ubuntu | [Cloudsmith DEB repository](#install-from-cloudsmith-on-debian-or-ubuntu) | Downloaded `.deb`, portable `.tar.gz`, Go toolchain, source |
+| Alpine Linux | [Cloudsmith APK repository](#install-from-cloudsmith-on-alpine-linux) | Downloaded `.apk`, portable `.tar.gz`, Go toolchain, source |
 | Other Linux distributions | [Portable `.tar.gz`](#install-a-portable-linux-or-macos-archive) | Go toolchain, source |
 | Windows | [Portable `.zip`](#install-a-windows-zip) | Go toolchain, source |
 
@@ -91,6 +91,12 @@ For an installation without Homebrew, use the
 
 ## Linux
 
+Jobman publishes DEB, RPM, and APK packages for Linux 386, amd64, and arm64 in
+the public [`jobman/stable` Cloudsmith repository](https://cloudsmith.io/~jobman/repos/stable/).
+Cloudsmith signs repository metadata and packages for verification by the
+native package manager. Configure the repository once with the setup script
+for your package format, then install and upgrade Jobman normally.
+
 ### Install from the RPM repository
 
 The signed Cloudsmith repository is recommended on Fedora, RHEL, CentOS
@@ -114,13 +120,47 @@ future stable releases with:
 sudo dnf upgrade jobman
 ```
 
-### Install a DEB package on Debian or Ubuntu
+### Install from Cloudsmith on Debian or Ubuntu
 
-Jobman does not currently publish an APT repository. The easiest installation
-on Debian and Ubuntu is the native `.deb` package from
-[GitHub Releases](https://github.com/ryancswallace/jobman/releases). Download
-the file matching your version and architecture, verify it as described under
-[Verify a manual download](#verify-a-manual-download), then run:
+Configure the signed DEB repository, then install Jobman with APT:
+
+```sh
+curl -1sLf \
+  'https://dl.cloudsmith.io/public/jobman/stable/cfg/setup/bash.deb.sh' |
+  sudo -E bash
+sudo apt update
+sudo apt install jobman
+jobman --version
+```
+
+Download and review the setup script first when local policy prohibits piping
+a network response to a privileged shell. Upgrade future releases with
+`sudo apt update && sudo apt upgrade jobman`.
+
+### Install from Cloudsmith on Alpine Linux
+
+Install the setup-script prerequisites, configure the signed APK repository,
+and install Jobman:
+
+```sh
+sudo apk add --no-cache bash curl
+curl -1sLf \
+  'https://dl.cloudsmith.io/public/jobman/stable/cfg/setup/bash.alpine.sh' |
+  sudo -E bash
+sudo apk add jobman
+jobman --version
+```
+
+Download and review the setup script first when required by local policy.
+Upgrade future releases with `sudo apk upgrade jobman`.
+
+### Install a downloaded DEB package
+
+As an alternative to configuring Cloudsmith, download the `.deb` matching your
+version and architecture from
+[GitHub Releases](https://github.com/ryancswallace/jobman/releases), verify it
+as described under [Verify a manual download](#verify-a-manual-download), then
+run:
 
 ```sh
 VERSION=X.Y.Z
@@ -132,7 +172,7 @@ jobman --version
 Use `ARCH=arm64` or `ARCH=386` where appropriate. To upgrade, download the new
 package, verify it, and run the same `apt install` command with its version.
 
-### Install an APK package on Alpine Linux
+### Install a downloaded APK package
 
 Download the `.apk` matching your version and architecture from
 [GitHub Releases](https://github.com/ryancswallace/jobman/releases), then

@@ -87,9 +87,9 @@ Start with the package or archive that fits your operating system:
 | Environment | Recommended for most users | Other available methods |
 | --- | --- | --- |
 | macOS | [Homebrew][install-homebrew]: `brew install ryancswallace/tap/jobman` | `.tar.gz`, Go toolchain, source |
-| Fedora, RHEL, Rocky, AlmaLinux, Amazon Linux | [Signed RPM repository][install-rpm-repository], then `sudo dnf install jobman` | Downloaded `.rpm`, `.tar.gz`, Go toolchain, source |
-| Debian or Ubuntu | [Downloaded `.deb`][install-deb], then `sudo apt install ./jobman_X.Y.Z_linux_amd64.deb` | `.tar.gz`, Go toolchain, source |
-| Alpine Linux | [Downloaded `.apk`][install-apk], then `sudo apk add --allow-untrusted ./jobman_X.Y.Z_linux_amd64.apk` | `.tar.gz`, Go toolchain, source |
+| Fedora, RHEL, Rocky, AlmaLinux, Amazon Linux | [Cloudsmith RPM repository][install-rpm-repository], then `sudo dnf install jobman` | Downloaded `.rpm`, `.tar.gz`, Go toolchain, source |
+| Debian or Ubuntu | [Cloudsmith DEB repository][install-deb-repository], then `sudo apt install jobman` | Downloaded `.deb`, `.tar.gz`, Go toolchain, source |
+| Alpine Linux | [Cloudsmith APK repository][install-apk-repository], then `sudo apk add jobman` | Downloaded `.apk`, `.tar.gz`, Go toolchain, source |
 | Other Linux | [Portable `.tar.gz` release archive][install-archive] | Go toolchain, source |
 | Windows | [Portable `.zip` release archive][install-windows] installed with PowerShell | Go toolchain, source |
 
@@ -147,9 +147,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution requirements.
 [evidence schema and privacy reference]: docs/DIAGNOSTIC_EVIDENCE.md
 [first-job guide]: https://jobman.tech/getting-started/first-job/
 [getting started]: https://jobman.tech/getting-started/
-[install-apk]: https://jobman.tech/getting-started/installation/#install-an-apk-package-on-alpine-linux
+[install-apk-repository]: https://jobman.tech/getting-started/installation/#install-from-cloudsmith-on-alpine-linux
 [install-archive]: https://jobman.tech/getting-started/installation/#install-a-portable-linux-or-macos-archive
-[install-deb]: https://jobman.tech/getting-started/installation/#install-a-deb-package-on-debian-or-ubuntu
+[install-deb-repository]: https://jobman.tech/getting-started/installation/#install-from-cloudsmith-on-debian-or-ubuntu
 [install-homebrew]: https://jobman.tech/getting-started/installation/#install-with-homebrew-on-macos
 [install-rpm-repository]: https://jobman.tech/getting-started/installation/#install-from-the-rpm-repository
 [install-windows]: https://jobman.tech/getting-started/installation/#install-a-windows-zip

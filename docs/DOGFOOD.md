@@ -580,14 +580,29 @@ jobman config validate /etc/jobman/jobman.yml
 man jobman
 ```
 
-Also install through the public Cloudsmith repository on one DNF-compatible
-host:
+Also install through each public Cloudsmith repository on disposable hosts
+with the matching package manager:
 
 ```sh
+# Debian or Ubuntu
+curl -1sLf \
+  'https://dl.cloudsmith.io/public/jobman/stable/cfg/setup/bash.deb.sh' |
+  sudo -E bash
+sudo apt update
+sudo apt install jobman
+
+# Fedora, RHEL, Rocky Linux, AlmaLinux, or Amazon Linux
 curl -1sLf \
   'https://dl.cloudsmith.io/public/jobman/stable/cfg/setup/bash.rpm.sh' |
   sudo -E bash
 sudo dnf install jobman
+
+# Alpine Linux
+sudo apk add --no-cache bash curl
+curl -1sLf \
+  'https://dl.cloudsmith.io/public/jobman/stable/cfg/setup/bash.alpine.sh' |
+  sudo -E bash
+sudo apk add jobman
 ```
 
 On Fedora 44 or later, Cloudsmith's generated repository must not force the
