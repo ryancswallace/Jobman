@@ -22,9 +22,11 @@ builds, signs, and publishes the release artifacts.
    remote checksum, signature, and provenance assets are verified, the workflow
    publishes the exact draft by numeric release ID and then moves the stable
    `latest` container alias to its already signed immutable image.
-7. After a stable release is public, the workflow publishes its verified RPMs
-   to the public `jobman/stable` Cloudsmith repository and publishes the
-   generated Homebrew formula to `ryancswallace/homebrew-tap`. This ordering
+7. After a stable release is public, the workflow publishes its nine verified
+   DEB, RPM, and APK packages to the public `jobman/stable` Cloudsmith
+   repository and proposes the generated Homebrew formula to
+   `ryancswallace/homebrew-tap`. Required tap checks validate and automatically
+   merge the formula pull request. This ordering
    prevents either package repository from advertising assets that are still
    private in a draft release.
 8. If there are no releasable commits, the workflow exits successfully without
@@ -128,23 +130,26 @@ Cloudsmith publication uses a personal API key because the free Cloudsmith Core
 plan does not provide OIDC or service accounts. Create the key under **Personal
 API Keys** for an account that can push to `jobman/stable`, then store it as the
 `CLOUDSMITH_API_KEY` secret in the Jobman repository's protected `main`
-environment. The release, staged-release recovery, and manual RPM repair jobs
+environment. The release, staged-release recovery, and manual package repair jobs
 all run under that environment and pass the secret only to the pinned
 Cloudsmith CLI action. Never store or print the key in the repository; replace
 the environment secret immediately whenever the key is refreshed or may have
 been exposed. Keep the Cloudsmith repository public and classified as open
 source.
 
-RPM publication is idempotent. Before uploading, the shared publication script
-requires an already-public stable GitHub release, verifies its keyless signed
-checksum manifest, verifies all three expected RPM checksums, and refuses to
-replace a Cloudsmith package with different bytes. If publication fails after
-the GitHub release becomes public, dispatch **Publish RPM release** from `main`
-with the existing stable tag; it verifies and publishes only missing RPMs.
+Linux-package publication is idempotent. Before uploading, the shared
+publication script requires an already-public stable GitHub release and
+verifies its keyless signed checksum manifest, all nine package checksums, and
+every GitHub artifact attestation. Each upload carries the original release
+digest as a `source-sha256-*` tag, which remains comparable when Cloudsmith
+re-signs an RPM. If publication fails after the GitHub release becomes public,
+dispatch **Publish Linux packages** from `main` with the existing stable tag;
+it verifies and publishes only missing packages.
 
 Create `HOMEBREW_TAP_TOKEN` as a fine-grained personal access token restricted
 to the `ryancswallace/homebrew-tap` repository with **Contents: read and
-write**. Store it as a secret in the Jobman repository's protected `main`
+write** and **Pull requests: read and write**. Store it as a secret in the
+Jobman repository's protected `main`
 environment. Do not grant it access to the Jobman repository, releases,
 packages, workflows, or administration. Every job that reads this secret uses
 the `main` environment. The Homebrew publication job receives no write
@@ -153,11 +158,13 @@ release is public.
 
 When creating or editing the token, select `ryancswallace` as its resource
 owner, choose **Only select repositories**, explicitly select
-`homebrew-tap`, and set **Repository permissions → Contents** to **Read and
-write**. Replace the environment secret whenever the token is regenerated or
+`homebrew-tap`, and set **Repository permissions → Contents** and **Pull
+requests** to **Read and write**. Replace the environment secret whenever the token is regenerated or
 expires. The workflows query the repository API before checkout and fail early
-unless the token reports push permission. Repository branch protection or
-rulesets must also permit this token's owner to update `main`.
+unless the token reports repository write access. The workflow pushes only an
+automation branch, opens a pull request, and requests auto-merge; protected
+`main` requires strict online audit and installation tests for both formulas
+on Intel and Apple Silicon runners.
 
 If Homebrew publication fails after the GitHub release becomes public, fix the
 token or repository rule and dispatch **Publish Homebrew formula** from `main`
@@ -177,10 +184,11 @@ rebuild artifacts, sign new content, push packages, or move a container alias.
 It runs under the protected `main` environment and shares
 `devel/verify-publish-release.sh` with the normal release workflow.
 
-In **Settings → Actions → General → Workflow permissions**, enable **Allow
-GitHub Actions to create and approve pull requests** so the post-release and
-scheduled repository-maintenance workflow can open its reviewed metadata pull
-request. No workflow automatically approves or merges that pull request.
+In **Settings → Actions → General → Workflow permissions**, retain read-only
+defaults and leave **Allow GitHub Actions to create and approve pull requests**
+disabled. Post-release and scheduled repository maintenance publish only the
+`automation/repository-maintenance` review branch and place its compare URL in
+the workflow summary. A maintainer creates and reviews the pull request.
 
 The workflow grants its token only the explicit write permissions listed
 above. In the package settings, ensure this repository's workflow has write
@@ -203,8 +211,9 @@ DOCKER_CONFIG="$anonymous_config" \
 rm -rf "$anonymous_config"
 ```
 
-If tag protection rules cover `v*`, allow the GitHub Actions release identity to
-create those tags.
+Protect existing `v*` tags from update and deletion. Permit authorized writers
+and the release workflow to create new tags; do not grant Actions a bypass that
+would also allow existing release tags to be rewritten or deleted.
 
 The release job uses the repository's `main` environment. Keep that environment
 restricted to deployments from `main`, and retain required reviewers when

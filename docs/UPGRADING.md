@@ -11,9 +11,9 @@ releases preserve the CLI, JSON, configuration, and persisted-state contracts
 described in `docs/COMPATIBILITY.md`; release notes identify any newly added
 fields or migrations.
 
-Jobman v1.0 through v1.3 write database schema 7. The unreleased diagnostic
-extension writes schema 8 and directly upgrades intact existing schemas 1
-through 7. Schema 8 adds a private store-local fingerprint key and typed
+Jobman v1.0 through v1.3 write database schema 7. Jobman v1.4 and newer write
+schema 8 and directly upgrade intact existing schemas 1 through 7. Schema 8
+adds a private store-local fingerprint key and typed
 per-run diagnostic facts. Schema 0 represents a new, uninitialized database
 rather than a supported historical store. If `doctor` reports a foreign
 application ID, an unsupported schema, a migration checksum mismatch, or

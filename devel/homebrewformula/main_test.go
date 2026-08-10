@@ -31,7 +31,8 @@ func TestRun(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, want := range []string{
-		`version "1.2.3"`,
+		`# typed: strict`,
+		`# frozen_string_literal: true`,
 		"/releases/download/v1.2.3/jobman_1.2.3_darwin_amd64.tar.gz",
 		`sha256 "` + amd64Digest + `"`,
 		"/releases/download/v1.2.3/jobman_1.2.3_darwin_arm64.tar.gz",
@@ -44,6 +45,9 @@ func TestRun(t *testing.T) {
 		if !strings.Contains(string(formula), want) {
 			t.Errorf("formula does not contain %q", want)
 		}
+	}
+	if strings.Contains(string(formula), `version "1.2.3"`) {
+		t.Error("formula contains a redundant explicit version")
 	}
 }
 

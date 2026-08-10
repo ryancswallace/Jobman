@@ -118,10 +118,13 @@ func readFormulaData(path string) (formulaData, error) {
 	return data, nil
 }
 
-var formulaTemplate = template.Must(template.New("formula").Parse(`class Jobman < Formula
+var formulaTemplate = template.Must(template.New("formula").Parse(`# typed: strict
+# frozen_string_literal: true
+
+# Installs Jobman from its verified release archive.
+class Jobman < Formula
   desc "Daemonless command-line job manager with retries, timeouts, and logs"
   homepage "https://github.com/ryancswallace/jobman"
-  version "{{ .Version }}"
   license "MIT"
 
   on_macos do

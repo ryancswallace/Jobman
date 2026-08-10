@@ -30,9 +30,9 @@ count_files() {
 	directory=$1
 	pattern=$2
 	want=$3
-	got=$(find "$directory" -maxdepth 1 -type f -name "$pattern" | wc -l | tr -d ' ')
+	got=$(find "$directory" -maxdepth 1 -type f -name "$pattern" -size +0c | wc -l | tr -d ' ')
 	[ "$got" -eq "$want" ] ||
-		die "$directory contains $got files matching $pattern; expected $want"
+		die "$directory contains $got nonempty files matching $pattern; expected $want"
 }
 
 verify_checksums() {
@@ -73,15 +73,29 @@ check_artifacts() {
 	) >/dev/null || die 'artifact checksum verification failed'
 
 	set -- "$dist"/jobman_*_linux_amd64.tar.gz
-	archive=$1
-	[ "$(basename "$archive")" = "jobman_${release_version}_linux_amd64.tar.gz" ] ||
+	content_archive=$1
+	[ "$(basename "$content_archive")" = "jobman_${release_version}_linux_amd64.tar.gz" ] ||
 		die 'archive and checksum manifest versions do not match'
+	host_os=$(go env GOOS)
+	host_arch=$(go env GOARCH)
+	case ${host_os}/${host_arch} in
+		linux/386 | linux/amd64 | linux/arm64 | darwin/amd64 | darwin/arm64)
+			native_archive=$dist/jobman_${release_version}_${host_os}_${host_arch}.tar.gz
+			native_binary=jobman
+			;;
+		windows/386 | windows/amd64 | windows/arm64)
+			native_archive=$dist/jobman_${release_version}_${host_os}_${host_arch}.zip
+			native_binary=jobman.exe
+			;;
+		*) die "unsupported release-check host: ${host_os}/${host_arch}" ;;
+	esac
+	[ -s "$native_archive" ] || die "native archive is missing: $native_archive"
 	temporary=$(mktemp -d \
 		"${TMPDIR:-/tmp}/jobman-release-check.XXXXXXXXXX") ||
 		die 'could not create a private release-check directory'
 	trap 'rm -rf "$temporary"' EXIT HUP INT TERM
 	mkdir -p "$temporary/extract"
-	tar -tzf "$archive" >"$temporary/contents"
+	tar -tzf "$content_archive" >"$temporary/contents"
 
 	for required in \
 		jobman LICENSE THIRD_PARTY_NOTICES.md README.md CHANGELOG.md CITATION.cff \
@@ -99,10 +113,14 @@ check_artifacts() {
 		die 'portable archive contains repository-only completion scaffolding'
 	fi
 
-	tar -xzf "$archive" -C "$temporary/extract" \
-		jobman CHANGELOG.md CITATION.cff THIRD_PARTY_NOTICES.md
+	tar -xzf "$content_archive" -C "$temporary/extract" \
+		CHANGELOG.md CITATION.cff THIRD_PARTY_NOTICES.md
+	case $native_archive in
+		*.tar.gz) tar -xzf "$native_archive" -C "$temporary/extract" "$native_binary" ;;
+		*.zip) unzip -qq "$native_archive" "$native_binary" -d "$temporary/extract" ;;
+	esac
 	binary_version=$(
-		"$temporary/extract/jobman" --version |
+		"$temporary/extract/$native_binary" --version |
 			awk 'NR == 1 { print $2 }'
 	)
 	[ -n "$binary_version" ] || die 'could not read the packaged binary version'

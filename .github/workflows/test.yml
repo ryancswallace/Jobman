@@ -44,6 +44,9 @@ jobs:
       - name: Validate workflows and shell scripts
         run: make workflow-check shellcheck
 
+      - name: Check public diagnostic API compatibility
+        run: make diagnostic-api-check
+
   test:
     name: Test
     runs-on: ubuntu-latest

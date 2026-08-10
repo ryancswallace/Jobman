@@ -54,6 +54,7 @@ LINT_CGO_ENABLED ?= 0
 GORELEASER_VERSION ?= v2.17.0
 ACTIONLINT_VERSION ?= v1.7.12
 GOVULNCHECK_VERSION ?= v1.6.0
+APIDIFF_VERSION ?= v0.0.0-20260727155853-b88d891fe743
 SYFT_VERSION ?= v1.46.0
 VHS_VERSION ?= v0.11.0
 CSPELL_VERSION ?= 10.0.1
@@ -62,6 +63,8 @@ GOLANGCI_LINT ?= $(BIN_DIR)/golangci-lint
 GORELEASER ?= $(BIN_DIR)/goreleaser
 ACTIONLINT ?= $(BIN_DIR)/actionlint
 GOVULNCHECK ?= $(BIN_DIR)/govulncheck
+APIDIFF ?= $(BIN_DIR)/apidiff
+APIDIFF_VERSION_FILE := $(BIN_DIR)/.apidiff-$(APIDIFF_VERSION)
 SYFT ?= $(BIN_DIR)/syft
 SYFT_VERSION_FILE := $(BIN_DIR)/.syft-$(SYFT_VERSION)
 VHS ?= $(BIN_DIR)/vhs
@@ -108,11 +111,12 @@ go-version-check: ## Verify the active Go toolchain matches go.version exactly.
 	fi
 
 .PHONY: tools
-tools: tool-golangci-lint tool-goreleaser tool-actionlint tool-govulncheck tool-syft tool-vhs ## Install pinned development tools into bin/ when absent.
+tools: tool-golangci-lint tool-goreleaser tool-actionlint tool-govulncheck tool-apidiff tool-syft tool-vhs ## Install pinned development tools into bin/ when absent.
 
 .PHONY: tool-golangci-lint
 tool-golangci-lint:
-	@if ! $(GOLANGCI_LINT) version 2>/dev/null \
+	@set -eu; \
+	if ! $(GOLANGCI_LINT) version 2>/dev/null \
 		| grep -Fq 'version $(patsubst v%,%,$(GOLANGCI_LINT_VERSION))'; then \
 		echo "Installing golangci-lint $(GOLANGCI_LINT_VERSION) into $(BIN_DIR)/"; \
 		mkdir -p $(BIN_DIR); \
@@ -122,7 +126,8 @@ tool-golangci-lint:
 
 .PHONY: tool-goreleaser
 tool-goreleaser:
-	@if ! $(GORELEASER) --version 2>/dev/null \
+	@set -eu; \
+	if ! $(GORELEASER) --version 2>/dev/null \
 		| grep -Fq '$(patsubst v%,%,$(GORELEASER_VERSION))'; then \
 		echo "Installing GoReleaser $(GORELEASER_VERSION) into $(BIN_DIR)/"; \
 		mkdir -p $(BIN_DIR); \
@@ -132,7 +137,8 @@ tool-goreleaser:
 
 .PHONY: tool-actionlint
 tool-actionlint:
-	@if ! $(ACTIONLINT) -version 2>/dev/null \
+	@set -eu; \
+	if ! $(ACTIONLINT) -version 2>/dev/null \
 		| grep -Fq '$(patsubst v%,%,$(ACTIONLINT_VERSION))'; then \
 		echo "Installing actionlint $(ACTIONLINT_VERSION) into $(BIN_DIR)/"; \
 		mkdir -p $(BIN_DIR); \
@@ -142,7 +148,8 @@ tool-actionlint:
 
 .PHONY: tool-govulncheck
 tool-govulncheck:
-	@if ! $(GOVULNCHECK) -version 2>/dev/null \
+	@set -eu; \
+	if ! $(GOVULNCHECK) -version 2>/dev/null \
 		| grep -Fq '$(GOVULNCHECK_VERSION)'; then \
 		echo "Installing govulncheck $(GOVULNCHECK_VERSION) into $(BIN_DIR)/"; \
 		mkdir -p $(BIN_DIR); \
@@ -150,9 +157,21 @@ tool-govulncheck:
 			golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION); \
 	fi
 
+.PHONY: tool-apidiff
+tool-apidiff:
+	@set -eu; \
+	if ! test -x '$(APIDIFF)' || ! test -f '$(APIDIFF_VERSION_FILE)'; then \
+		echo "Installing apidiff $(APIDIFF_VERSION) into $(BIN_DIR)/"; \
+		mkdir -p $(BIN_DIR); \
+		GOBIN=$(abspath $(BIN_DIR)) $(GO) install \
+			golang.org/x/exp/cmd/apidiff@$(APIDIFF_VERSION); \
+		touch '$(APIDIFF_VERSION_FILE)'; \
+	fi
+
 .PHONY: tool-syft
 tool-syft:
-	@if ! test -x '$(SYFT)' || ! test -f '$(SYFT_VERSION_FILE)'; then \
+	@set -eu; \
+	if ! test -x '$(SYFT)' || ! test -f '$(SYFT_VERSION_FILE)'; then \
 		echo "Installing Syft $(SYFT_VERSION) into $(BIN_DIR)/"; \
 		mkdir -p $(BIN_DIR); \
 		GOBIN=$(abspath $(BIN_DIR)) $(GO) install \
@@ -162,7 +181,8 @@ tool-syft:
 
 .PHONY: tool-vhs
 tool-vhs:
-	@if ! $(VHS) --version 2>/dev/null; then \
+	@set -eu; \
+	if ! $(VHS) --version 2>/dev/null; then \
 		echo "Installing VHS $(VHS_VERSION) into $(BIN_DIR)/"; \
 		mkdir -p $(BIN_DIR); \
 		GOBIN=$(abspath $(BIN_DIR)) $(GO) install \
@@ -182,6 +202,8 @@ versions: ## Print the versions used by development and release tooling.
 	@$(ACTIONLINT) -version
 	@$(MAKE) --no-print-directory tool-govulncheck
 	@$(GOVULNCHECK) -version
+	@printf 'apidiff:       %s\n' '$(APIDIFF_VERSION)'
+	@$(MAKE) --no-print-directory tool-apidiff
 	@$(MAKE) --no-print-directory tool-syft
 	@$(SYFT) version
 	@$(MAKE) --no-print-directory tool-vhs
@@ -234,6 +256,10 @@ shellcheck: ## Statically analyze repository shell scripts.
 .PHONY: vulncheck
 vulncheck: tool-govulncheck ## Check reachable Go code for known vulnerabilities.
 	$(GOVULNCHECK) ./...
+
+.PHONY: diagnostic-api-check
+diagnostic-api-check: tool-apidiff ## Reject incompatible changes to the stable diagnostic Go API.
+	APIDIFF='$(abspath $(APIDIFF))' GO='$(GO)' ./devel/check-diagnostic-api.sh
 
 .PHONY: vet
 vet: ## Run go vet independently of the aggregate linter.
@@ -473,12 +499,16 @@ release-build: tool-goreleaser ## Compile every target declared in GoReleaser.
 .PHONY: snapshot
 snapshot: tool-goreleaser tool-syft ## Build a local release snapshot without publishing.
 	PATH='$(abspath $(BIN_DIR))':$$PATH \
-		$(GORELEASER) release --snapshot --clean --parallelism 2 \
+		$(GORELEASER) release --snapshot --clean --parallelism 1 \
 			--skip=sign
 	$(MAKE) --no-print-directory artifact-check
 
+.PHONY: package-smoke
+package-smoke: ## Install snapshot packages in pinned Debian, Fedora, and Alpine containers.
+	./devel/package-smoke.sh $(DIST_DIR)
+
 .PHONY: check quick-check ci
-check: go-version-check mod-check format-check lint workflow-check shellcheck vulncheck test notices-check docs build docker-smoke release-check release-build ## Run all presubmission checks.
+check: go-version-check mod-check format-check lint workflow-check shellcheck vulncheck diagnostic-api-check test notices-check docs build docker-smoke release-check release-build ## Run all presubmission checks.
 quick-check: go-version-check mod-check format-check lint unittest build ## Run the fast presubmission checks.
 ci: check ## Alias for the complete CI verification workflow.
 

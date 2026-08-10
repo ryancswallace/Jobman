@@ -113,6 +113,8 @@ when another maintainer is available. Block force pushes and branch deletion.
 Keep the default Actions token read-only and grant write permissions only in the
 specific jobs that publish maintenance updates, Pages, releases, or security
 results.
+The maintenance workflow publishes an isolated automation branch and a compare
+URL; it does not receive pull-request write or approval authority.
 
 Enable private vulnerability reporting, Dependabot alerts and security updates,
 secret scanning, and push protection when they are available for the repository.

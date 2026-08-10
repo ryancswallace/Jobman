@@ -11,11 +11,11 @@ Implementation is guided by the
 
 A post-v1 extension for deterministic diagnostic evidence and an optional
 independently installed diagnosis companion is described in the
-[diagnostic evidence and diagnosis design](DIAGNOSIS.md). The core evidence,
-offline companion, external-command, resource-observation, fingerprint, and
-similarity slices are implemented on `main` but not yet released. Generated-
-model augmentation remains target design and is not part of the frozen v1
-contract.
+[diagnostic evidence and diagnosis design](DIAGNOSIS.md). Jobman v1.4.0
+released core evidence, external-command dispatch, resource observations,
+failure fingerprints, and exact similarity history. Jobman Diagnose v0.1.0
+released deterministic analysis and optional generated-model augmentation.
+These additive facilities do not change the frozen v1 Jobman contract.
 The corresponding
 [diagnosis implementation plan](DIAGNOSIS_IMPLEMENTATION_PLAN.md) divides that
 proposal into independently releasable core, companion, provider, evaluation,

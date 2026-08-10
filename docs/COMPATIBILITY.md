@@ -19,6 +19,10 @@ contract for sealed evidence schema 1. Its concrete types and documented
 codec functions are supported independently of Jobman's private backend and
 store types.
 
+CI compares that exported package API with the published v1.4.0 baseline.
+Removing or changing a public declaration is rejected; additive declarations
+remain permitted under the schema rules below.
+
 Backend injection and internal model/store types are private implementation
 seams. They are not a general-purpose Jobman SDK. A future SDK requires its own
 documented, externally implementable types and a separate compatibility review.
@@ -54,8 +58,10 @@ own `kind` and `schema_version` nested inside the CLI envelope.
 - `show evidence JOB` returns a bounded factual snapshot. `--run` and
   `--all-runs` select run history; log content is absent unless `--logs tail`
   is explicit; direct command argument vectors, paths, and environment names
-  are absent unless their respective collection flags are explicit. Environment
-  values and secret-reference identifiers remain excluded. Evidence schema 1 item codes
+  are absent unless their respective collection flags are explicit. Bounded
+  collector-host filesystem and cgroup facts require `--system`. Environment
+  values, host paths, hostnames, process lists, and secret-reference identifiers
+  remain excluded. Evidence schema 1 item codes
   may grow additively, so consumers must ignore unknown codes while rejecting
   unsupported required schemas.
 - An unknown lowercase command can resolve to the exact `jobman-NAME`
@@ -95,9 +101,9 @@ sharing it.
 ## State and upgrades
 
 Jobman migrates supported older schemas forward and never silently downgrades.
-Jobman v1.0 through v1.3 write database schema 7. The unreleased diagnostic
-extension writes schema 8 and directly upgrades intact existing schemas 1
-through 7. Schema 8 adds typed per-run diagnostic facts and one private local
+Jobman v1.0 through v1.3 write database schema 7. Jobman v1.4 and newer write
+schema 8 and directly upgrade intact existing schemas 1 through 7. Schema 8
+adds typed per-run diagnostic facts and one private local
 fingerprint key; it does not backfill historical failures. Schema 0 represents
 a new, uninitialized database rather than a supported historical store.
 Releases before v0.6.0 were an unrelated prototype and have no supported

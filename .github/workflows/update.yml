@@ -29,7 +29,6 @@ jobs:
     permissions:
       actions: read
       contents: write
-      pull-requests: write
     steps:
       - name: Select maintenance run
         id: decision
@@ -75,18 +74,32 @@ jobs:
         if: steps.decision.outputs.run == 'true'
         run: make quick-check release-metadata-check notices-check
 
-      - name: Create maintenance pull request
+      - name: Publish maintenance review branch
         if: steps.decision.outputs.run == 'true'
-        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
-        with:
-          branch: automation/repository-maintenance
-          delete-branch: true
-          commit-message: "chore: run repository maintenance"
-          title: "chore: run repository maintenance"
-          body: |
-            Automated repository maintenance.
-
-            - Synchronizes pinned Go version declarations.
-            - Updates copyright years.
-            - Reconciles changelog records after releases.
-            - Regenerates and validates documentation assets and dependency notices.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if git diff --quiet; then
+            echo "Repository maintenance produced no changes." >> "${GITHUB_STEP_SUMMARY}"
+            exit 0
+          fi
+          branch=automation/repository-maintenance
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git checkout -B "${branch}"
+          git add --all
+          git commit -m "chore: run repository maintenance"
+          if git ls-remote --exit-code --heads origin "refs/heads/${branch}" >/dev/null 2>&1; then
+            git fetch origin "refs/heads/${branch}:refs/remotes/origin/${branch}"
+            expected=$(git rev-parse "refs/remotes/origin/${branch}")
+            git push --force-with-lease="refs/heads/${branch}:${expected}" \
+              origin "HEAD:refs/heads/${branch}"
+          else
+            git push origin "HEAD:refs/heads/${branch}"
+          fi
+          compare_url="https://github.com/${GITHUB_REPOSITORY}/compare/main...${branch}?expand=1"
+          {
+            echo "### Repository maintenance is ready for review"
+            echo
+            echo "Create and review the maintenance pull request: ${compare_url}"
+          } >> "${GITHUB_STEP_SUMMARY}"

@@ -74,7 +74,7 @@ func TestReleaseWorkflowsShareProtectedPublicationHelper(t *testing.T) {
 		"contents: write",
 		"api-key: ${{ secrets.CLOUDSMITH_API_KEY }}",
 		"run: ./devel/verify-publish-release.sh",
-		"run: ./devel/publish-cloudsmith-rpms.sh",
+		"run: ./devel/publish-cloudsmith-packages.sh",
 		`PROMOTE_LATEST: "false"`,
 	} {
 		if !strings.Contains(recoveryWorkflow, required) {
@@ -106,7 +106,7 @@ func TestReleaseVerificationUsesCanonicalRepositoryIdentity(t *testing.T) {
 	for _, path := range []string{
 		"../.github/workflows/release.yml",
 		"../.github/workflows/repair-latest.yml",
-		"publish-cloudsmith-rpms.sh",
+		"publish-cloudsmith-packages.sh",
 		"verify-publish-release.sh",
 		"../RELEASE.md",
 		"../docs/DOGFOOD.md",
@@ -173,7 +173,7 @@ func TestCloudsmithPublicationUsesProtectedAPIKeyAndIsRepairable(t *testing.T) {
 	releaseWorkflow := readRepositoryFile(t, "../.github/workflows/release.yml")
 	repairWorkflow := readRepositoryFile(
 		t,
-		"../.github/workflows/publish-cloudsmith-rpms.yml",
+		"../.github/workflows/publish-cloudsmith-packages.yml",
 	)
 	recoveryWorkflow := readRepositoryFile(
 		t,
@@ -189,8 +189,10 @@ func TestCloudsmithPublicationUsesProtectedAPIKeyAndIsRepairable(t *testing.T) {
 			"name: main",
 			"cloudsmith-io/cloudsmith-cli-action@db783de9f6e7a445e5e31d94f4210303b48a10a3",
 			"api-key: ${{ secrets.CLOUDSMITH_API_KEY }}",
+			"cli-version: 1.21.0",
+			"CLOUDSMITH_API_KEY: ${{ secrets.CLOUDSMITH_API_KEY }}",
 			`verify-auth: "true"`,
-			"publish-cloudsmith-rpms.sh",
+			"publish-cloudsmith-packages.sh",
 		} {
 			if !strings.Contains(contents, required) {
 				t.Errorf("%s workflow is missing %q", name, required)
@@ -218,22 +220,25 @@ func TestCloudsmithPublicationUsesProtectedAPIKeyAndIsRepairable(t *testing.T) {
 		}
 	}
 
-	helper := readRepositoryFile(t, "publish-cloudsmith-rpms.sh")
+	helper := readRepositoryFile(t, "publish-cloudsmith-packages.sh")
 	for _, required := range []string{
 		"CLOUDSMITH_API_KEY",
-		"CLOUDSMITH_ORG",
-		"CLOUDSMITH_SERVICE_SLUG",
 		"gh release view",
 		"cosign verify-blob",
+		"gh attestation verify",
 		"sha256sum --check",
+		"source-sha256-",
+		"alpine/any-version",
 		"any-distro/any-version",
-		"checksum_sha256",
+		"linux_*.apk",
+		"linux_*.deb",
+		"linux_*.rpm",
 	} {
 		if !strings.Contains(helper, required) {
 			t.Errorf("Cloudsmith publication helper is missing %q", required)
 		}
 	}
-	info, err := os.Stat("publish-cloudsmith-rpms.sh")
+	info, err := os.Stat("publish-cloudsmith-packages.sh")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -242,7 +247,7 @@ func TestCloudsmithPublicationUsesProtectedAPIKeyAndIsRepairable(t *testing.T) {
 	}
 }
 
-func TestCloudsmithPublicationAcceptsAPIKeyOrOIDCAuthentication(t *testing.T) {
+func TestCloudsmithPublicationRequiresAPIKey(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -252,11 +257,8 @@ func TestCloudsmithPublicationAcceptsAPIKeyOrOIDCAuthentication(t *testing.T) {
 		wantMessage string
 	}{
 		{
-			name: "missing GitHub token",
-			environment: map[string]string{
-				"CLOUDSMITH_ORG":          "jobman",
-				"CLOUDSMITH_SERVICE_SLUG": "service",
-			},
+			name:        "missing GitHub token",
+			environment: map[string]string{"CLOUDSMITH_API_KEY": "test-key"},
 			wantExit:    2,
 			wantMessage: "GH_TOKEN is required",
 		},
@@ -264,22 +266,13 @@ func TestCloudsmithPublicationAcceptsAPIKeyOrOIDCAuthentication(t *testing.T) {
 			name:        "missing Cloudsmith authentication",
 			environment: map[string]string{"GH_TOKEN": "test-token"},
 			wantExit:    2,
-			wantMessage: "Cloudsmith authentication requires",
+			wantMessage: "CLOUDSMITH_API_KEY is required",
 		},
 		{
 			name: "API key",
 			environment: map[string]string{
 				"CLOUDSMITH_API_KEY": "test-key",
 				"GH_TOKEN":           "test-token",
-			},
-			wantExit: 23,
-		},
-		{
-			name: "OIDC",
-			environment: map[string]string{
-				"CLOUDSMITH_ORG":          "jobman",
-				"CLOUDSMITH_SERVICE_SLUG": "service",
-				"GH_TOKEN":                "test-token",
 			},
 			wantExit: 23,
 		},
@@ -292,11 +285,9 @@ func TestCloudsmithPublicationAcceptsAPIKeyOrOIDCAuthentication(t *testing.T) {
 			binDirectory := t.TempDir()
 			writeExecutableFixture(t, filepath.Join(binDirectory, "gh"), "#!/bin/sh\nexit 23\n")
 			environment := map[string]string{
-				"CLOUDSMITH_API_KEY":      "",
-				"CLOUDSMITH_ORG":          "",
-				"CLOUDSMITH_SERVICE_SLUG": "",
-				"GH_TOKEN":                "",
-				"PATH":                    binDirectory + string(os.PathListSeparator) + os.Getenv("PATH"),
+				"CLOUDSMITH_API_KEY": "",
+				"GH_TOKEN":           "",
+				"PATH":               binDirectory + string(os.PathListSeparator) + os.Getenv("PATH"),
 			}
 			for key, value := range testCase.environment {
 				environment[key] = value
@@ -305,7 +296,7 @@ func TestCloudsmithPublicationAcceptsAPIKeyOrOIDCAuthentication(t *testing.T) {
 			command := exec.CommandContext( // #nosec G204 -- The command and arguments are repository-controlled.
 				t.Context(),
 				"bash",
-				"./devel/publish-cloudsmith-rpms.sh",
+				"./devel/publish-cloudsmith-packages.sh",
 				"v1.2.3",
 			)
 			command.Dir = ".."
@@ -342,13 +333,21 @@ func TestHomebrewPublicationChecksTokenAndIsRepairable(t *testing.T) {
 		for _, required := range []string{
 			"secrets.HOMEBREW_TAP_TOKEN",
 			"gh api repos/ryancswallace/homebrew-tap",
-			"--jq '.permissions.push'",
+			"Pull requests: read and write",
 			"repository: ryancswallace/homebrew-tap",
-			"git push origin HEAD:main",
+			"gh pr create",
+			"gh pr merge \"${pr_url}\" --auto --squash --delete-branch",
 		} {
 			if !strings.Contains(contents, required) {
 				t.Errorf("%s workflow is missing %q", name, required)
 			}
+		}
+	}
+	for name, contents := range map[string]string{
+		"release": releaseWorkflow, "recovery": recoveryWorkflow, "repair": repairWorkflow,
+	} {
+		if strings.Contains(contents, "git push origin HEAD:main") {
+			t.Errorf("%s workflow bypasses Homebrew tap pull-request validation", name)
 		}
 	}
 	for _, required := range []string{
@@ -358,6 +357,26 @@ func TestHomebrewPublicationChecksTokenAndIsRepairable(t *testing.T) {
 	} {
 		if !strings.Contains(repairWorkflow, required) {
 			t.Errorf("Homebrew repair workflow is missing %q", required)
+		}
+	}
+}
+
+func TestMaintenancePublishesReviewBranchWithoutPullRequestAuthority(t *testing.T) {
+	t.Parallel()
+
+	workflow := readRepositoryFile(t, "../.github/workflows/update.yml")
+	for _, required := range []string{
+		"automation/repository-maintenance",
+		"git push --force-with-lease=",
+		"compare/main...${branch}?expand=1",
+	} {
+		if !strings.Contains(workflow, required) {
+			t.Errorf("maintenance workflow is missing %q", required)
+		}
+	}
+	for _, forbidden := range []string{"pull-requests: write", "create-pull-request"} {
+		if strings.Contains(workflow, forbidden) {
+			t.Errorf("maintenance workflow retains broad PR authority %q", forbidden)
 		}
 	}
 }

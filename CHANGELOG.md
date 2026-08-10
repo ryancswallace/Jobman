@@ -8,10 +8,43 @@ semantic-release.
 
 ## [Unreleased]
 
+### Added
+
+- Added an explicit public diagnostic API compatibility gate against Jobman
+  v1.4.0.
+- Added install-time smoke tests for generated DEB, RPM, and APK packages in
+  pinned Debian, Fedora, and Alpine containers.
+- Added opt-in, bounded point-in-time system evidence for the Jobman state
+  filesystem and Linux cgroup-v2 memory, PID, and cumulative OOM constraints.
+
+### Changed
+
+- Changed scheduled repository maintenance to publish a review branch and
+  compare URL without granting GitHub Actions repository-wide PR approval
+  authority.
+- Generalized Cloudsmith publication to all nine Linux packages, with GitHub
+  attestation verification and immutable source-digest tags that remain stable
+  when Cloudsmith re-signs RPMs.
+- Changed Homebrew publication to open an automatically merged, required-check
+  pull request in the protected shared tap instead of pushing directly to its
+  default branch.
+
 ### Fixed
 
+- Made pinned tool bootstrap recipes fail immediately instead of risking a
+  success marker after a failed installation.
+- Passed the protected Cloudsmith API key into every publisher invocation and
+  pinned the Cloudsmith CLI version consistently across release paths.
+- Made release artifact verification execute the matching native archive on
+  Linux, macOS, and Windows instead of assuming a Linux host.
+- Rejected empty release assets and serialized native-package generation to
+  prevent a successful release from retaining incomplete nFPM output.
 - Restored Cloudsmith RPM publication on the free Core plan by authenticating
   protected release jobs with an environment-scoped API key instead of OIDC.
+- Removed the redundant explicit Homebrew formula version rejected by strict
+  online audit and strengthened repair publication provenance verification.
+- Kept system context explicitly scoped to the collector host and prevented
+  cumulative cgroup OOM counters from being treated as per-run attribution.
 
 ## [1.4.0] - 2026-08-09
 
