@@ -53,7 +53,10 @@ The protocol has these rules:
     preserves its exit status and does not print a second error after the child
     has reported its own failure.
 11. Root help and completion never enumerate or execute programs from `PATH`.
-    `jobman NAME --help` is forwarded only after the user names the extension.
+    Completion may advertise an explicit allowlist of supported first-party
+    companion names and values that core can resolve itself, such as job
+    selectors for `diagnose`. `jobman NAME --help` is forwarded only after the
+    user names the extension.
 
 An extension is trusted native code running with the user's authority. The
 protocol provides invocation context, not a sandbox. Extension installation

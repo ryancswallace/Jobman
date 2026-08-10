@@ -95,6 +95,7 @@ func newRootCommand(dependencies dependencies) *cobra.Command {
 	command.SetFlagErrorFunc(func(_ *cobra.Command, err error) error {
 		return usageError(err)
 	})
+	command.ValidArgsFunction = rootArgumentCompletion(dependencies, options)
 
 	command.AddCommand(
 		newRunCommand(dependencies, options),

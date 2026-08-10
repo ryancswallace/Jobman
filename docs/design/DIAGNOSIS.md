@@ -310,9 +310,12 @@ every discovered binary to populate ordinary root help or completions. It does
 not download extensions, search the current directory unless it is explicitly
 on `PATH`, or maintain a hidden plug-in directory.
 
-`jobman NAME --help` is forwarded normally. An extension packages its own shell
-completion files or implements the documented completion request; core Jobman
-does not run every program on `PATH` during tab completion.
+`jobman NAME --help` is forwarded normally. Core Jobman may statically complete
+explicitly supported first-party companion names and values it can resolve
+without the child, such as job selectors for `diagnose`. An extension packages
+completion for its own flags and other values or implements the documented
+completion request; core Jobman does not enumerate or run programs on `PATH`
+during tab completion.
 
 An extension executable is trusted code running with the user's authority.
 The documentation must warn that an otherwise unknown command may resolve to a

@@ -139,7 +139,7 @@ func newRunCommand(dependencies dependencies, root *rootOptions) *cobra.Command 
 	flags.StringArrayVar(&options.notificationEvents, "notify-on", nil, "subscribe selected notifiers to an event")
 	flags.BoolVar(&options.waitForCompletion, "wait", false, "wait for the terminal job outcome")
 	flags.BoolVar(&options.foreground, "foreground", false, "attach input and output and wait for completion")
-	registerJobIDFlagCompletion(
+	registerJobSelectorFlagCompletion(
 		command,
 		dependencies,
 		root,
@@ -150,7 +150,7 @@ func newRunCommand(dependencies dependencies, root *rootOptions) *cobra.Command 
 	)
 	if err := command.RegisterFlagCompletionFunc(
 		"after-outcome",
-		jobIDOutcomeCompletion(dependencies, root),
+		jobSelectorOutcomeCompletion(dependencies, root),
 	); err != nil {
 		panic(err)
 	}

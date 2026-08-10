@@ -13,12 +13,15 @@ import (
 	"github.com/ryancswallace/jobman/internal/model"
 )
 
-const matchingJobID = "01980f4c-7b2a-7a6f-8c10-0123456789ac"
+const (
+	matchingJobID   = "01980f4c-7b2a-7a6f-8c10-0123456789ac"
+	matchingJobName = "nightly-report"
+)
 
-func TestJobIDCompletionReturnsPrefixMatches(t *testing.T) {
+func TestJobSelectorCompletionReturnsIDAndNamePrefixMatches(t *testing.T) {
 	t.Parallel()
 	backend := completionBackend(t)
-	complete := jobIDCompletion(dependenciesFor(backend), &rootOptions{})
+	complete := jobSelectorCompletion(dependenciesFor(backend), &rootOptions{})
 	command := &cobra.Command{}
 
 	completions, directive := complete(command, nil, "01980")
@@ -44,9 +47,41 @@ func TestJobIDCompletionReturnsPrefixMatches(t *testing.T) {
 	if len(completions) != 0 {
 		t.Fatalf("missing completions = %q, want none", completions)
 	}
+
+	backend.closed = false
+	completions, _ = complete(command, nil, "nightly-")
+	want = []cobra.Completion{"nightly-primary", matchingJobName}
+	if !slices.Equal(completions, want) {
+		t.Fatalf("name completions = %q, want %q", completions, want)
+	}
+
+	backend.jobs[0].Spec = mustTestSpec(t, matchingJobID)
+	backend.closed = false
+	completions, _ = complete(command, nil, "01980")
+	want = []cobra.Completion{testJobID, matchingJobID}
+	if !slices.Equal(completions, want) {
+		t.Fatalf("deduplicated completions = %q, want %q", completions, want)
+	}
 }
 
-func TestCobraCompletionReturnsMatchingJobIDs(t *testing.T) {
+func TestJobSelectorCompletionSuppressesAmbiguousNames(t *testing.T) {
+	t.Parallel()
+	backend := completionBackend(t)
+	duplicate := backend.jobs[1]
+	duplicate.ID = model.JobID("03980f4c-7b2a-7a6f-8c10-0123456789ae")
+	backend.jobs = append(backend.jobs, duplicate)
+	complete := jobSelectorCompletion(dependenciesFor(backend), &rootOptions{})
+
+	completions, directive := complete(&cobra.Command{}, nil, matchingJobName)
+	if len(completions) != 0 {
+		t.Fatalf("ambiguous name completions = %q, want none", completions)
+	}
+	if directive != cobra.ShellCompDirectiveNoFileComp {
+		t.Fatalf("directive = %v, want no file completion", directive)
+	}
+}
+
+func TestCobraCompletionReturnsMatchingJobSelectors(t *testing.T) {
 	t.Parallel()
 	output, err := executeCommand(t, dependenciesFor(completionBackend(t)), []string{
 		"__complete", "rerun", "01980",
@@ -59,14 +94,26 @@ func TestCobraCompletionReturnsMatchingJobIDs(t *testing.T) {
 			t.Errorf("completion output = %q, want %s", output, id)
 		}
 	}
+
+	output, err = executeCommand(t, dependenciesFor(completionBackend(t)), []string{
+		"__complete", "status", "nightly-",
+	})
+	if err != nil {
+		t.Fatalf("name completion command error = %v", err)
+	}
+	for _, name := range []string{"nightly-primary", matchingJobName} {
+		if !strings.Contains(output, name+"\n") {
+			t.Errorf("completion output = %q, want %s", output, name)
+		}
+	}
 }
 
-func TestJobIDCompletionFailuresAreSilent(t *testing.T) {
+func TestJobSelectorCompletionFailuresAreSilent(t *testing.T) {
 	t.Parallel()
 	wantErr := errors.New("list failed")
 	backend := completionBackend(t)
 	backend.operationErr = wantErr
-	complete := jobIDCompletion(dependenciesFor(backend), &rootOptions{})
+	complete := jobSelectorCompletion(dependenciesFor(backend), &rootOptions{})
 
 	completions, directive := complete(&cobra.Command{}, nil, "019")
 	if len(completions) != 0 || directive != cobra.ShellCompDirectiveNoFileComp {
@@ -76,7 +123,7 @@ func TestJobIDCompletionFailuresAreSilent(t *testing.T) {
 		t.Fatal("failed completion backend was not closed")
 	}
 
-	openFailure := jobIDCompletion(dependencies{OpenBackend: func(
+	openFailure := jobSelectorCompletion(dependencies{OpenBackend: func(
 		context.Context,
 		string,
 	) (app.Backend, error) {
@@ -85,6 +132,61 @@ func TestJobIDCompletionFailuresAreSilent(t *testing.T) {
 	completions, directive = openFailure(&cobra.Command{}, nil, "019")
 	if len(completions) != 0 || directive != cobra.ShellCompDirectiveNoFileComp {
 		t.Fatalf("open failure completion = (%q, %v), want no candidates and no file completion", completions, directive)
+	}
+}
+
+func TestRootCompletionOffersDiagnoseAndItsJobSelectors(t *testing.T) {
+	t.Parallel()
+	output, err := executeCommand(t, dependenciesFor(completionBackend(t)), []string{
+		"__complete", "dia",
+	})
+	if err != nil {
+		t.Fatalf("command-name completion error = %v", err)
+	}
+	if !strings.Contains(output, "diagnose\tDiagnose a failed job with the optional companion\n") {
+		t.Fatalf("command-name completion output = %q, want diagnose", output)
+	}
+
+	output, err = executeCommand(t, dependenciesFor(completionBackend(t)), []string{
+		"__complete", diagnoseExtension, "nightly-",
+	})
+	if err != nil {
+		t.Fatalf("diagnose selector completion error = %v", err)
+	}
+	for _, name := range []string{"nightly-primary", matchingJobName} {
+		if !strings.Contains(output, name+"\n") {
+			t.Errorf("diagnose completion output = %q, want %s", output, name)
+		}
+	}
+
+	output, err = executeCommand(t, dependenciesFor(completionBackend(t)), []string{
+		"__complete", diagnoseExtension, "01980",
+	})
+	if err != nil {
+		t.Fatalf("diagnose ID completion error = %v", err)
+	}
+	for _, id := range []string{testJobID, matchingJobID} {
+		if !strings.Contains(output, id+"\n") {
+			t.Errorf("diagnose completion output = %q, want %s", output, id)
+		}
+	}
+}
+
+func TestRootCompletionHonorsExtensionDisableControls(t *testing.T) {
+	t.Parallel()
+	tests := map[string]dependencies{
+		"environment": {
+			Getenv: func(string) string { return "1" },
+		},
+		"option": {},
+	}
+	for name, dependencies := range tests {
+		root := &rootOptions{noExtensions: name == "option"}
+		complete := rootArgumentCompletion(dependencies, root)
+		completions, directive := complete(&cobra.Command{}, nil, "dia")
+		if len(completions) != 0 || directive != cobra.ShellCompDirectiveNoFileComp {
+			t.Errorf("%s disabled completion = (%q, %v), want none", name, completions, directive)
+		}
 	}
 }
 
@@ -123,6 +225,14 @@ func TestEveryJobArgumentRegistersCompletion(t *testing.T) {
 			t.Errorf("%v directive = %v, want no file completion", path, directive)
 		}
 		backend.closed = false
+		completions, directive = command.ValidArgsFunction(command, nil, matchingJobName)
+		if !slices.Equal(completions, []cobra.Completion{matchingJobName}) {
+			t.Errorf("%v name completions = %q, want %q", path, completions, matchingJobName)
+		}
+		if directive != cobra.ShellCompDirectiveNoFileComp {
+			t.Errorf("%v name directive = %v, want no file completion", path, directive)
+		}
+		backend.closed = false
 	}
 
 	runCommand := completionCommand(t, root, "run")
@@ -131,7 +241,7 @@ func TestEveryJobArgumentRegistersCompletion(t *testing.T) {
 	}
 }
 
-func TestRunJobIDFlagsRegisterCompletion(t *testing.T) {
+func TestRunJobSelectorFlagsRegisterCompletion(t *testing.T) {
 	t.Parallel()
 	backend := completionBackend(t)
 	runCommand := completionCommand(t, newRootCommand(dependenciesFor(backend)), "run")
@@ -168,12 +278,19 @@ func TestRunJobIDFlagsRegisterCompletion(t *testing.T) {
 	if len(completions) != 0 || directive != cobra.ShellCompDirectiveNoFileComp {
 		t.Fatalf("--after-outcome value completions = (%q, %v), want none", completions, directive)
 	}
+	completions, directive = complete(runCommand, nil, matchingJobName)
+	if !slices.Equal(completions, []cobra.Completion{matchingJobName + "="}) {
+		t.Fatalf("--after-outcome name completions = %q, want job name followed by =", completions)
+	}
+	if directive != wantDirective {
+		t.Fatalf("--after-outcome name directive = %v, want %v", directive, wantDirective)
+	}
 }
 
-func TestJobIDArgumentCompletionStopsAfterSelector(t *testing.T) {
+func TestJobSelectorArgumentCompletionStopsAfterSelector(t *testing.T) {
 	t.Parallel()
 	opened := false
-	complete := jobIDArgumentCompletion(dependencies{OpenBackend: func(
+	complete := jobSelectorArgumentCompletion(dependencies{OpenBackend: func(
 		context.Context,
 		string,
 	) (app.Backend, error) {
@@ -194,10 +311,13 @@ func TestJobIDArgumentCompletionStopsAfterSelector(t *testing.T) {
 func completionBackend(t *testing.T) *fakeBackend {
 	t.Helper()
 	backend := newFakeBackend(t)
+	backend.jobs[0].Spec = mustTestSpec(t, "nightly-primary")
 	matching := backend.jobs[0]
 	matching.ID = model.JobID(matchingJobID)
+	matching.Spec = mustTestSpec(t, matchingJobName)
 	unrelated := backend.jobs[0]
 	unrelated.ID = model.JobID("02980f4c-7b2a-7a6f-8c10-0123456789ad")
+	unrelated.Spec = mustTestSpec(t, "other-job")
 	backend.jobs = append(backend.jobs, matching, unrelated)
 
 	return backend

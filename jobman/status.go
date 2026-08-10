@@ -40,7 +40,7 @@ func newStatusCommand(dependencies dependencies, root *rootOptions) *cobra.Comma
 		},
 	}
 	command.Flags().BoolVar(&jsonOutput, "json", false, "emit versioned JSON")
-	command.ValidArgsFunction = jobIDArgumentCompletion(dependencies, root)
+	command.ValidArgsFunction = jobSelectorArgumentCompletion(dependencies, root)
 
 	return command
 }

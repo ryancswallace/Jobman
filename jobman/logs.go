@@ -120,7 +120,7 @@ func newLogsCommand(dependencies dependencies, root *rootOptions) *cobra.Command
 	command.Flags().BoolVar(&allRuns, "all", false, "read every retained run")
 	command.Flags().Int64VarP(&lines, "lines", "n", -1, "show the last N lines (-1 means all)")
 	command.Flags().BoolVar(&raw, "raw", false, "omit run presentation headers")
-	command.ValidArgsFunction = jobIDArgumentCompletion(dependencies, root)
+	command.ValidArgsFunction = jobSelectorArgumentCompletion(dependencies, root)
 
 	return command
 }

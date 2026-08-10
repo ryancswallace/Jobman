@@ -8,6 +8,12 @@ semantic-release.
 
 ## [Unreleased]
 
+### Added
+
+- Added shell completion for the optional `jobman diagnose` command name and
+  its job selector, and expanded all job-selector completion to include unique
+  job names alongside IDs.
+
 ### Changed
 
 - Documented Cloudsmith repository installation for Jobman's DEB, RPM, and APK

@@ -31,7 +31,7 @@ func newShowCommand(dependencies dependencies, root *rootOptions) *cobra.Command
 		},
 	}
 	runCommand.Flags().SetInterspersed(false)
-	runCommand.ValidArgsFunction = jobIDArgumentCompletion(dependencies, root)
+	runCommand.ValidArgsFunction = jobSelectorArgumentCompletion(dependencies, root)
 	jobCommand := &cobra.Command{
 		Use:   "job JOB",
 		Short: "Show a job and its run history",
@@ -40,7 +40,7 @@ func newShowCommand(dependencies dependencies, root *rootOptions) *cobra.Command
 			return showJob(command, dependencies, root, arguments[0], jsonOutput)
 		},
 	}
-	jobCommand.ValidArgsFunction = jobIDArgumentCompletion(dependencies, root)
+	jobCommand.ValidArgsFunction = jobSelectorArgumentCompletion(dependencies, root)
 	command := &cobra.Command{
 		Use:   "show JOB",
 		Short: "Show a job and its run history",
@@ -50,7 +50,7 @@ func newShowCommand(dependencies dependencies, root *rootOptions) *cobra.Command
 		},
 	}
 	command.PersistentFlags().BoolVar(&jsonOutput, "json", false, "emit versioned JSON")
-	command.ValidArgsFunction = jobIDArgumentCompletion(dependencies, root)
+	command.ValidArgsFunction = jobSelectorArgumentCompletion(dependencies, root)
 	command.AddCommand(
 		evidenceCommand,
 		jobCommand,
@@ -95,7 +95,7 @@ func newShowEvidenceCommand(
 	command.Flags().Var(newEvidenceLogModeValue(&request.Logs), "logs", "collect logs as metadata, tail, or none")
 	byteSizeFlag(command.Flags(), &request.LogBytes, "log-bytes", "maximum bytes per selected log stream")
 	command.Flags().Uint64Var(&request.Similar, "similar", 0, "request up to N same-fingerprint histories")
-	command.ValidArgsFunction = jobIDArgumentCompletion(dependencies, root)
+	command.ValidArgsFunction = jobSelectorArgumentCompletion(dependencies, root)
 
 	return command
 }
