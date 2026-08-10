@@ -40,7 +40,7 @@ func TestRun(t *testing.T) {
 		`bash_completion.install "docs/completions/bash/jobman"`,
 		`zsh_completion.install "docs/completions/zsh/_jobman"`,
 		`(etc/"jobman").install "etc/jobman/jobman.yml"`,
-		`assert_match version.to_s, shell_output("#{bin}/jobman --version")`,
+		`assert_match "jobman 1.2.3", shell_output("#{bin}/jobman --version")`,
 	} {
 		if !strings.Contains(string(formula), want) {
 			t.Errorf("formula does not contain %q", want)
