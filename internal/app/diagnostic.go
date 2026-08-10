@@ -188,16 +188,17 @@ func requestedRunNumber(selected int64, total uint64) uint64 {
 }
 
 type evidenceCollector struct {
-	service     *Service
-	snapshot    store.DiagnosticSnapshot
-	selected    []model.RunState
-	capturedAt  modelTime
-	sanitizer   diagnostic.Sanitizer
-	encodeValue func(any) (json.RawMessage, error)
-	evidence    diagnostic.Evidence
-	omissions   map[string]map[string]struct{}
-	redactions  map[string]map[string]struct{}
-	redacted    map[string]uint64
+	service       *Service
+	snapshot      store.DiagnosticSnapshot
+	selected      []model.RunState
+	capturedAt    modelTime
+	sanitizer     diagnostic.Sanitizer
+	encodeValue   func(any) (json.RawMessage, error)
+	observeSystem func(string) diagnostic.SystemContext
+	evidence      diagnostic.Evidence
+	omissions     map[string]map[string]struct{}
+	redactions    map[string]map[string]struct{}
+	redacted      map[string]uint64
 }
 
 // modelTime aliases time.Time only to keep the collector initializer compact.
@@ -227,6 +228,7 @@ func newEvidenceCollector(
 	return &evidenceCollector{
 		service: service, snapshot: snapshot, selected: selected,
 		capturedAt: capturedAt, sanitizer: sanitizer, encodeValue: diagnostic.JSONValue,
+		observeSystem: systemcontext.Observe,
 		evidence: diagnostic.Evidence{
 			CapturedAt: capturedAt,
 			Source: diagnostic.Source{
@@ -317,7 +319,11 @@ func (collector *evidenceCollector) collect(ctx context.Context, request diagnos
 }
 
 func (collector *evidenceCollector) collectSystem() error {
-	value := systemcontext.Observe(collector.service.stateDir)
+	observe := collector.observeSystem
+	if observe == nil {
+		observe = systemcontext.Observe
+	}
+	value := observe(collector.service.stateDir)
 	if valid := value.Validate() == nil; !valid {
 		collector.omit(diagnostic.OmissionSystemContextUnavailable, "system_context")
 

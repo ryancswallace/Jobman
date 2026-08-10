@@ -126,8 +126,9 @@ func TestEvidenceCollectorReportsUnavailableSystemContext(t *testing.T) {
 
 	collector := &evidenceCollector{
 		service: &Service{}, encodeValue: diagnostic.JSONValue,
-		evidence:  diagnostic.Evidence{Items: []diagnostic.Item{}},
-		omissions: make(map[string]map[string]struct{}),
+		observeSystem: func(string) diagnostic.SystemContext { return diagnostic.SystemContext{} },
+		evidence:      diagnostic.Evidence{Items: []diagnostic.Item{}},
+		omissions:     make(map[string]map[string]struct{}),
 	}
 	if err := collector.collectSystem(); err != nil {
 		t.Fatalf("collectSystem() error = %v", err)
@@ -656,6 +657,15 @@ func TestEvidenceCollectorProjectsRichSnapshot(t *testing.T) {
 		service, snapshot, snapshot.Runs, completedAt.Add(time.Second),
 		replacingSanitizer{old: []byte("workers"), replacement: []byte("pool")},
 	)
+	collector.observeSystem = func(string) diagnostic.SystemContext {
+		return diagnostic.SystemContext{
+			Scope: diagnostic.SystemScopeCollectorHost,
+			Filesystem: &diagnostic.FilesystemCapacity{
+				Scope: diagnostic.SystemFilesystemScope, Source: diagnostic.SystemFilesystemStatfs,
+				AvailableBytes: 512, TotalBytes: 1024,
+			},
+		}
+	}
 	if collectErr := collector.collect(t.Context(), diagnostic.EvidenceRequest{
 		Selector: jobID.String(), AllRuns: true, Logs: diagnostic.LogsMetadata, Similar: 1,
 		IncludeCommand: true, IncludePaths: true, IncludeEnvironmentNames: true, IncludeSystem: true,
