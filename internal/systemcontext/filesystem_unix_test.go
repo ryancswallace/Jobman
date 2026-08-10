@@ -4,6 +4,18 @@ package systemcontext
 
 import "testing"
 
+func TestObserve(t *testing.T) {
+	t.Parallel()
+
+	context := Observe(t.TempDir())
+	if err := context.Validate(); err != nil {
+		t.Fatalf("Observe() = %#v: %v", context, err)
+	}
+	if context.Filesystem == nil {
+		t.Fatalf("Observe() lacks state filesystem capacity: %#v", context)
+	}
+}
+
 func TestObserveFilesystem(t *testing.T) {
 	t.Parallel()
 
