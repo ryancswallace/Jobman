@@ -364,9 +364,9 @@ Module: <https://pkg.go.dev/github.com/inconshreveable/mousetrap@v1.1.0>
        See the License for the specific language governing permissions and
        limitations under the License.
 
-## github.com/mattn/go-isatty v0.0.20
+## github.com/mattn/go-isatty v0.0.24
 
-Module: <https://pkg.go.dev/github.com/mattn/go-isatty@v0.0.20>
+Module: <https://pkg.go.dev/github.com/mattn/go-isatty@v0.0.24>
 
 ### LICENSE
 
@@ -790,9 +790,9 @@ Module: <https://pkg.go.dev/golang.org/x/sys@v0.47.0>
     rights granted to you under this License for this implementation of Go
     shall terminate as of the date such litigation is filed.
 
-## modernc.org/libc v1.74.1
+## modernc.org/libc v1.74.4
 
-Module: <https://pkg.go.dev/modernc.org/libc@v1.74.1>
+Module: <https://pkg.go.dev/modernc.org/libc@v1.74.4>
 
 ### LICENSE
 
@@ -1262,9 +1262,9 @@ Module: <https://pkg.go.dev/modernc.org/memory@v1.11.0>
     SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-## modernc.org/sqlite v1.55.0
+## modernc.org/sqlite v1.56.0
 
-Module: <https://pkg.go.dev/modernc.org/sqlite@v1.55.0>
+Module: <https://pkg.go.dev/modernc.org/sqlite@v1.56.0>
 
 ### LICENSE
 
