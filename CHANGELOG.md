@@ -8,6 +8,8 @@ semantic-release.
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-08-11
+
 ### Added
 
 - Added shell completion for the optional `jobman diagnose` command name and
