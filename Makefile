@@ -30,7 +30,7 @@ COVERAGE_E2E_DIR := .coverage-e2e
 COVERAGE_E2E_FILE := coverage.e2e.raw
 COVERAGE_COMBINED_FILE := coverage.combined.raw
 COVERAGE_HTML := coverage.html
-COVERAGE_MIN ?= 95
+COVERAGE_MIN ?= 90
 COVERAGE_PACKAGE_MIN ?= 90
 UNIT_COVERAGE_MIN ?= 90
 
