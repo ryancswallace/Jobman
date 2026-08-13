@@ -414,6 +414,18 @@ func TestEnvironmentSourceRejectsInvalidAndDuplicateValues(t *testing.T) {
 	}
 }
 
+func TestCurrentEnvironmentSourceAndUnsupportedBinding(t *testing.T) {
+	t.Setenv("JOBMAN_RETENTION_MAX_JOBS", "12")
+
+	source, found, err := CurrentEnvironmentSource()
+	if err != nil || !found || source.Kind != SourceEnvironment {
+		t.Fatalf("CurrentEnvironmentSource() = %#v, %t, %v", source, found, err)
+	}
+	if _, err := environmentScalar("12", environmentValueKind(255)); err == nil {
+		t.Fatal("environmentScalar(unsupported kind) error = nil")
+	}
+}
+
 func TestFileSourceReadsRegularYAML(t *testing.T) {
 	t.Parallel()
 

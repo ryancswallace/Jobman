@@ -832,6 +832,39 @@ func TestDrainAndLogMetadataEdges(t *testing.T) {
 	}
 }
 
+func TestNotificationSummaryBoundaryCases(t *testing.T) {
+	t.Parallel()
+
+	summary := notify.EventSummary{Reason: "unchanged"}
+	applyTransitionNotificationDetails(&summary, store.TransitionEvent{Details: []byte("{")})
+	if summary.Reason != "unchanged" {
+		t.Fatalf("invalid transition details changed summary: %+v", summary)
+	}
+
+	now := time.Now().UTC()
+	past := now.Add(-time.Second)
+	future := now.Add(time.Second)
+	applyNotificationRunCounts(&summary, []model.RunState{
+		{CompletedAt: &future, Outcome: model.RunOutcomeSuccess},
+		{CompletedAt: &past, Outcome: model.RunOutcomeFailure},
+	}, now)
+	if summary.RunCount == nil || *summary.RunCount != 1 ||
+		summary.SuccessCount == nil || *summary.SuccessCount != 0 ||
+		summary.FailureCount == nil || *summary.FailureCount != 1 {
+		t.Fatalf("filtered run counts = %+v", summary)
+	}
+
+	applyNotificationRun(&summary, model.RunState{Number: 2}, store.NotificationDelivery{
+		EventType: "job_started", OccurredAt: now,
+	})
+	if summary.RunOutcome != "" {
+		t.Fatalf("nonterminal run outcome = %q", summary.RunOutcome)
+	}
+	if notificationTime(time.Time{}) != nil || notificationTimeBefore(&future, now) != nil {
+		t.Fatal("unset or future notification time was retained")
+	}
+}
+
 type errorReadCloser struct {
 	readErr  error
 	closeErr error
