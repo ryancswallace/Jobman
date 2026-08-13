@@ -8,6 +8,12 @@ semantic-release.
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-08-13
+
+### Added
+
+- Added full diagnose job selectors.
+
 ## [1.5.0] - 2026-08-11
 
 ### Added
@@ -450,7 +456,8 @@ Release version.
 
 [Keep a Changelog]: https://keepachangelog.com/en/1.1.0/
 [Semantic Versioning]: https://semver.org/spec/v2.0.0.html
-[Unreleased]: https://github.com/ryancswallace/jobman/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/ryancswallace/jobman/compare/v1.6.0...HEAD
+[1.6.0]: https://github.com/ryancswallace/jobman/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/ryancswallace/jobman/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/ryancswallace/jobman/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/ryancswallace/jobman/compare/v1.2.0...v1.3.0
