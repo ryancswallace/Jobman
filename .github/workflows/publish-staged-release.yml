@@ -242,7 +242,7 @@ jobs:
           gh pr merge "${pr_url}" --auto --squash --delete-branch
 
       - name: Authenticate to Cloudsmith with API key
-        uses: cloudsmith-io/cloudsmith-cli-action@db783de9f6e7a445e5e31d94f4210303b48a10a3 # v3.0.1
+        uses: cloudsmith-io/cloudsmith-cli-action@ad73fafb92e3e29a5166c529464c2df7658a608e # v3.1.0
         with:
           api-key: ${{ secrets.CLOUDSMITH_API_KEY }}
           cli-version: 1.21.0
