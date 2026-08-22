@@ -84,5 +84,7 @@ replace_extended "s/Install Go [0-9]+(\.[0-9]+){1,2}/Install Go $GO_VERS/" \
     RELEASE.md
 replace_extended "s/(requires|require) Go [0-9]+(\.[0-9]+){1,2}/\\1 Go $GO_VERS/" \
     site/index.md site/getting-started/installation.md
+replace_extended "s/If Go [0-9]+(\.[0-9]+){1,2} is already installed/If Go $GO_VERS is already installed/" \
+    site/getting-started/installation.md
 
 trap - EXIT HUP INT TERM

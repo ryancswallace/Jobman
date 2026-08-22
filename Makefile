@@ -44,10 +44,17 @@ CONTAINER_SMOKE := ./devel/container-smoke.sh
 SCREENCASTS := ./devel/screencasts.sh
 
 GO ?= go
+# Go derives its installation root from the selected executable. Ignore a
+# shell-level GOROOT so a stale version-manager setting cannot mix toolchains.
+unexport GOROOT
 DOCKER ?= docker
 DOCKER_PROGRESS ?= plain
 
 GO_VERSION := $(shell tr -d '[:space:]' < go.version)
+# Select the pinned patch release even when another Go version appears first on
+# PATH. The go command uses an installed copy or its standard toolchain cache.
+GOTOOLCHAIN := go$(GO_VERSION)
+export GOTOOLCHAIN
 GOLANGCI_LINT_VERSION ?= v2.12.2
 LINT_GOOS ?= linux
 LINT_CGO_ENABLED ?= 0

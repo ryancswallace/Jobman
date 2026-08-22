@@ -3,7 +3,7 @@
   "build": {
     "dockerfile": "Dockerfile",
     "args": {
-      "GO_VERSION": "1.26.5"
+      "GO_VERSION": "1.26.6"
     }
   },
   "features": {

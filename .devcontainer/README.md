@@ -4,7 +4,7 @@ This devcontainer is the reproducible contributor environment for the project.
 
 It provides:
 
-* Go 1.26.5 on Debian Bookworm.
+* Go 1.26.6 on Debian Bookworm.
 * Pinned Go editor and debugging tools plus the repository tools installed by
     `make bootstrap`.
 * GitHub CLI for pull request and release workflows.

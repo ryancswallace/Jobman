@@ -138,6 +138,7 @@
         "gomod",
         "gomoddirectives",
         "GOPATH",
+        "GOROOT",
         "gopkg",
         "gopls",
         "goprintffuncname",

@@ -222,7 +222,7 @@ unless the workflow itself is dispatched from `main`.
 
 ## Local validation
 
-Install Go 1.26.5, GoReleaser 2.17, Syft, Cosign, SLSA verifier 2.7.1,
+Install Go 1.26.6, GoReleaser 2.17, Syft, Cosign, SLSA verifier 2.7.1,
 Docker with Buildx, and QEMU/binfmt for multi-platform container tests. Then
 run:
 

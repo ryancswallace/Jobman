@@ -4,7 +4,7 @@
 
 Jobman incorporates the following third-party Go modules. This file contains the license, notice, and patent files found at each module root for the union of the Linux, macOS, and Windows release binaries.
 
-## Go standard library go1.26.5
+## Go standard library go1.26.6
 
 ### LICENSE
 

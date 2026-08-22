@@ -356,7 +356,7 @@ not install those supporting files automatically.
 
 ### Install with the Go toolchain
 
-If Go 1.26.5 is already installed, install the latest tagged module without
+If Go 1.26.6 is already installed, install the latest tagged module without
 downloading a release archive:
 
 ```sh
