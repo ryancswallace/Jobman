@@ -1,0 +1,43 @@
+{
+  "apiVersion": "jobman/v1alpha1",
+  "kind": "EffectiveExecution",
+  "metadata": {
+    "executionId": "33333333-3333-4333-8333-333333333333",
+    "runId": "22222222-2222-4222-8222-222222222222",
+    "jobId": "11111111-1111-4111-8111-111111111111",
+    "namespace": "research"
+  },
+  "spec": {
+    "workload": {
+      "digest": "sha256:eb0a1173adb99e86e4e10059248fd642f6b505702d43765cf7a904684aefde01",
+      "document": {
+        "apiVersion": "jobman/v1alpha1",
+        "kind": "Workload",
+        "metadata": {
+          "name": "minimal"
+        },
+        "spec": {
+          "command": {
+            "executable": "true"
+          },
+          "workingDirectory": "workspace:/",
+          "runtime": {
+            "kind": "native"
+          },
+          "policy": {
+            "retry": {
+              "maxRuns": 1
+            },
+            "duplicateRisk": "reject"
+          }
+        }
+      }
+    },
+    "placement": {
+      "targetId": "44444444-4444-4444-8444-444444444444",
+      "targetGenerationId": "55555555-5555-4555-8555-555555555555",
+      "target": "workstation-a",
+      "executionBackend": "subprocess"
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "apiVersion": "jobman/v1alpha1",
+  "kind": "Workload",
+  "metadata": {
+    "name": "minimal"
+  },
+  "spec": {
+    "command": {
+      "executable": "true"
+    },
+    "workingDirectory": "workspace:/",
+    "runtime": {
+      "kind": "native"
+    },
+    "policy": {
+      "retry": {
+        "maxRuns": 1
+      },
+      "duplicateRisk": "reject"
+    }
+  }
+}

@@ -1,0 +1,291 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jobman.tech/schema/protocol/workload-v1alpha1.schema.json",
+  "title": "Jobman portable workload v1alpha1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "properties": {
+    "apiVersion": {"const": "jobman/v1alpha1"},
+    "kind": {"const": "Workload"},
+    "metadata": {"$ref": "#/$defs/workloadMetadata"},
+    "spec": {"$ref": "#/$defs/workloadSpec"}
+  },
+  "$defs": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[a-z0-9](?:[a-z0-9._-]{0,126}[a-z0-9])?$"
+    },
+    "nameMap": {
+      "type": "object",
+      "maxProperties": 1024,
+      "propertyNames": {"$ref": "#/$defs/name"},
+      "additionalProperties": {"type": "string", "maxLength": 65536}
+    },
+    "duration": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 128,
+      "pattern": "^[0-9].*[a-zA-Zµ]$"
+    },
+    "quantity": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]*(?:B|KiB|MiB|GiB|TiB|KB|MB|GB|TB)$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "artifactURI": {
+      "type": "string",
+      "pattern": "^artifact://[a-z0-9][a-z0-9._-]*/[^?#]+$"
+    },
+    "secretURI": {
+      "type": "string",
+      "pattern": "^secret://[a-z0-9][a-z0-9._-]*/[^?#]+$"
+    },
+    "workspacePath": {
+      "type": "string",
+      "pattern": "^workspace:/(?:[^/\\\\]+(?:/[^/\\\\]+)*)?$"
+    },
+    "inputPath": {
+      "type": "string",
+      "pattern": "^inputs:/(?:[^/\\\\]+(?:/[^/\\\\]+)*)?$"
+    },
+    "outputPath": {
+      "type": "string",
+      "pattern": "^outputs:/(?:[^/\\\\]+(?:/[^/\\\\]+)*)?$"
+    },
+    "workloadMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {"$ref": "#/$defs/name"},
+        "description": {"type": "string", "maxLength": 4096},
+        "labels": {"$ref": "#/$defs/nameMap"},
+        "annotations": {"$ref": "#/$defs/nameMap"}
+      }
+    },
+    "workloadSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command", "workingDirectory", "runtime", "policy"],
+      "properties": {
+        "command": {"$ref": "#/$defs/command"},
+        "workingDirectory": {"$ref": "#/$defs/workspacePath"},
+        "environment": {"$ref": "#/$defs/environment"},
+        "resources": {"$ref": "#/$defs/resources"},
+        "runtime": {"$ref": "#/$defs/runtime"},
+        "artifacts": {"$ref": "#/$defs/artifacts"},
+        "policy": {"$ref": "#/$defs/policy"},
+        "requirements": {"$ref": "#/$defs/requirements"},
+        "extensions": {
+          "type": "object",
+          "maxProperties": 1024,
+          "propertyNames": {"$ref": "#/$defs/name"},
+          "additionalProperties": {"type": "object"}
+        }
+      }
+    },
+    "command": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["executable"],
+          "properties": {
+            "executable": {"type": "string", "minLength": 1, "maxLength": 65536},
+            "args": {
+              "type": "array",
+              "maxItems": 4096,
+              "items": {"type": "string", "maxLength": 65536}
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["shell"],
+          "properties": {
+            "shell": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["capability", "script"],
+              "properties": {
+                "capability": {"$ref": "#/$defs/name"},
+                "script": {"type": "string", "minLength": 1, "maxLength": 1048576}
+              }
+            }
+          }
+        }
+      ]
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "profile": {"$ref": "#/$defs/name"},
+        "values": {
+          "type": "object",
+          "maxProperties": 1024,
+          "propertyNames": {
+            "type": "string",
+            "maxLength": 128,
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+          },
+          "additionalProperties": {"type": "string", "maxLength": 65536}
+        },
+        "secrets": {
+          "type": "array",
+          "maxItems": 1024,
+          "items": {"$ref": "#/$defs/secretBinding"}
+        }
+      }
+    },
+    "secretBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "source", "exposeAs"],
+      "properties": {
+        "name": {"$ref": "#/$defs/name"},
+        "source": {"$ref": "#/$defs/secretURI"},
+        "exposeAs": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["environment"],
+              "properties": {
+                "environment": {
+                  "type": "string",
+                  "maxLength": 128,
+                  "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["file"],
+              "properties": {"file": {"$ref": "#/$defs/workspacePath"}}
+            }
+          ]
+        }
+      }
+    },
+    "resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "cpu": {"type": "integer", "minimum": 1},
+        "memory": {"$ref": "#/$defs/quantity"},
+        "gpu": {"type": "integer", "minimum": 1},
+        "nodes": {"type": "integer", "minimum": 1},
+        "tasks": {"type": "integer", "minimum": 1},
+        "temporaryStorage": {"$ref": "#/$defs/quantity"},
+        "wallTime": {"$ref": "#/$defs/duration"}
+      }
+    },
+    "runtime": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind"],
+          "properties": {"kind": {"const": "native"}}
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "container"],
+          "properties": {
+            "kind": {"const": "container"},
+            "container": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["image", "pullPolicy", "network"],
+              "properties": {
+                "image": {"type": "string", "minLength": 1, "maxLength": 65536},
+                "pullPolicy": {"enum": ["always", "if-not-present", "never"]},
+                "network": {"enum": ["host", "none", "restricted"]}
+              }
+            }
+          }
+        }
+      ]
+    },
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "inputs": {
+          "type": "array",
+          "maxItems": 4096,
+          "items": {"$ref": "#/$defs/inputArtifact"}
+        },
+        "outputs": {
+          "type": "array",
+          "maxItems": 4096,
+          "items": {"$ref": "#/$defs/outputArtifact"}
+        }
+      }
+    },
+    "inputArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "source", "target"],
+      "properties": {
+        "name": {"$ref": "#/$defs/name"},
+        "source": {"$ref": "#/$defs/artifactURI"},
+        "target": {"$ref": "#/$defs/inputPath"},
+        "checksum": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "outputArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "source", "destination", "required"],
+      "properties": {
+        "name": {"$ref": "#/$defs/name"},
+        "source": {"$ref": "#/$defs/outputPath"},
+        "destination": {"$ref": "#/$defs/artifactURI"},
+        "required": {"type": "boolean"}
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["retry", "duplicateRisk"],
+      "properties": {
+        "runTimeout": {"$ref": "#/$defs/duration"},
+        "retry": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["maxRuns"],
+          "properties": {
+            "maxRuns": {"type": "integer", "minimum": 1, "maximum": 10000},
+            "backoff": {"$ref": "#/$defs/duration"}
+          }
+        },
+        "duplicateRisk": {"enum": ["allow-if-idempotent", "reject"]}
+      }
+    },
+    "requirements": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "operatingSystems": {"$ref": "#/$defs/nameSet"},
+        "architectures": {"$ref": "#/$defs/nameSet"},
+        "capabilities": {"$ref": "#/$defs/nameSet"}
+      }
+    },
+    "nameSet": {
+      "type": "array",
+      "maxItems": 1024,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/name"}
+    }
+  }
+}

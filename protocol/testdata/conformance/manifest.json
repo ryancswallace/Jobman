@@ -1,0 +1,58 @@
+{
+  "contract": "jobman/v1alpha1",
+  "cases": [
+    {
+      "file": "valid/workload-minimal.json",
+      "kind": "Workload",
+      "valid": true,
+      "digest": "sha256:eb0a1173adb99e86e4e10059248fd642f6b505702d43765cf7a904684aefde01"
+    },
+    {
+      "file": "valid/workload-full.json",
+      "kind": "Workload",
+      "valid": true,
+      "digest": "sha256:d159e65926af38256f2b4da6dc45926eba32c267de4e4944e3e32c338c915c24"
+    },
+    {
+      "file": "valid/job-request-minimal.json",
+      "kind": "JobRequest",
+      "valid": true,
+      "digest": "sha256:9e79d05d21baea1a9f226d8c1b679a680b9edcac7169ccc171f202009ebc23c1",
+      "workloadDigest": "sha256:eb0a1173adb99e86e4e10059248fd642f6b505702d43765cf7a904684aefde01"
+    },
+    {
+      "file": "valid/effective-execution-minimal.json",
+      "kind": "EffectiveExecution",
+      "valid": true,
+      "digest": "sha256:8f222f3e387b2f8a410137c12d77bc4611720bb7e40846f0f8f8d3766e55601e",
+      "workloadDigest": "sha256:eb0a1173adb99e86e4e10059248fd642f6b505702d43765cf7a904684aefde01"
+    },
+    {
+      "file": "valid/agent-assignment-minimal.json",
+      "kind": "AgentAssignment",
+      "valid": true,
+      "digest": "sha256:8f222f3e387b2f8a410137c12d77bc4611720bb7e40846f0f8f8d3766e55601e",
+      "workloadDigest": "sha256:eb0a1173adb99e86e4e10059248fd642f6b505702d43765cf7a904684aefde01"
+    },
+    {
+      "file": "invalid/workload-unknown-field.json",
+      "kind": "Workload",
+      "valid": false
+    },
+    {
+      "file": "invalid/workload-duplicate-secret.json",
+      "kind": "Workload",
+      "valid": false
+    },
+    {
+      "file": "invalid/job-request-bad-digest.json",
+      "kind": "JobRequest",
+      "valid": false
+    },
+    {
+      "file": "invalid/agent-assignment-bad-digest.json",
+      "kind": "AgentAssignment",
+      "valid": false
+    }
+  ]
+}

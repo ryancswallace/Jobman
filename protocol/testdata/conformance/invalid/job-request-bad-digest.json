@@ -1,0 +1,36 @@
+{
+  "apiVersion": "jobman/v1alpha1",
+  "kind": "JobRequest",
+  "metadata": {
+    "namespace": "research",
+    "name": "bad-digest"
+  },
+  "spec": {
+    "workload": {
+      "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "document": {
+        "apiVersion": "jobman/v1alpha1",
+        "kind": "Workload",
+        "metadata": {},
+        "spec": {
+          "command": {
+            "executable": "true"
+          },
+          "workingDirectory": "workspace:/",
+          "runtime": {
+            "kind": "native"
+          },
+          "policy": {
+            "retry": {
+              "maxRuns": 1
+            },
+            "duplicateRisk": "reject"
+          }
+        }
+      }
+    },
+    "placement": {
+      "target": "workstation-a"
+    }
+  }
+}
