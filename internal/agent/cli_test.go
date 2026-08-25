@@ -212,6 +212,13 @@ func TestRunServiceValidationAndCancelledStartup(t *testing.T) {
 	stateDirectory := t.TempDir()
 	pki := newTestPKI(t)
 	saveTestCredentials(t, pki, stateDirectory, "https://127.0.0.1:1")
+	canceledContext, cancelStartup := context.WithCancel(t.Context())
+	cancelStartup()
+	if err := RunService(canceledContext, ServiceOptions{
+		StateDirectory: stateDirectory, Logger: logger, PollInterval: time.Second,
+	}); err != nil {
+		t.Fatalf("RunService(pre-canceled) error = %v", err)
+	}
 	ctx, cancel := context.WithTimeout(t.Context(), 50*time.Millisecond)
 	defer cancel()
 	if err := RunService(ctx, ServiceOptions{
