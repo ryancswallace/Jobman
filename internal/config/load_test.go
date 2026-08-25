@@ -30,7 +30,8 @@ func TestDefaultConfiguration(t *testing.T) {
 	if !finite || logAge != 30*24*time.Hour {
 		t.Fatalf("CompletedLogMaxAge = (%v, %v), want (720h, true)", logAge, finite)
 	}
-	if configuration.JobSpecs == nil || configuration.Notifiers == nil || configuration.Profiles == nil {
+	if configuration.JobSpecs == nil || configuration.Notifiers == nil || configuration.Profiles == nil ||
+		configuration.Shared.Profiles == nil {
 		t.Fatal("Default() returned nil named-object maps")
 	}
 	specification := baseJobSpec()
@@ -340,6 +341,11 @@ func TestLoadSourcePolicyAndFileHandling(t *testing.T) {
 		!errors.Is(err, ErrInvalid) {
 		t.Fatalf("system source policy error = %v, want invalid configuration", err)
 	}
+	if _, err := Load(BytesSource(
+		SourceProject, "project", []byte("shared:\n  current_profile: department\n"),
+	)); err == nil || !errors.Is(err, ErrInvalid) {
+		t.Fatalf("project shared-profile policy error = %v, want invalid configuration", err)
+	}
 	if _, err := Parse(nil); err != nil {
 		t.Fatalf("Parse(empty) error = %v", err)
 	}
@@ -354,6 +360,34 @@ func TestLoadSourcePolicyAndFileHandling(t *testing.T) {
 	if _, err := Load(FileSource(SourceExplicit, filepath.Join(root, "missing.yml"))); err == nil ||
 		errors.Is(err, ErrInvalid) || !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("missing source error = %v, want filesystem not-exist failure", err)
+	}
+}
+
+func TestParseSharedProfiles(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	loaded, err := Parse([]byte(fmt.Sprintf(`
+shared:
+  current_profile: department
+  profiles:
+    department:
+      endpoint: https://jobman.example.edu
+      namespace: research
+      token_file: %q
+      ca_file: %q
+      artifact_roots:
+        department-nfs:
+          version: 3
+          path: %q
+`, filepath.Join(root, "token"), filepath.Join(root, "ca.pem"), filepath.Join(root, "artifacts"))))
+	if err != nil {
+		t.Fatalf("Parse(shared profiles) error = %v", err)
+	}
+	profile := loaded.Shared.Profiles["department"]
+	if loaded.Shared.CurrentProfile != "department" || profile.Namespace != "research" ||
+		profile.Endpoint != "https://jobman.example.edu" ||
+		profile.ArtifactRoots["department-nfs"].Version != 3 {
+		t.Fatalf("shared configuration = %#v", loaded.Shared)
 	}
 }
 

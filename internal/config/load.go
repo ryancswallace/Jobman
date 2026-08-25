@@ -35,6 +35,9 @@ retention:
   max_total_log_bytes: unlimited
 notifiers: {}
 profiles: {}
+shared:
+  current_profile: ""
+  profiles: {}
 redaction:
   names: []
   patterns: []
@@ -378,6 +381,9 @@ func validateSourcePolicy(source Source, mapping *yaml.Node) error {
 	}
 	if mappingValue(mapping, "trusted_project_roots") != nil {
 		return fmt.Errorf("%s configuration cannot set trusted_project_roots", source.Kind)
+	}
+	if source.Kind == SourceProject && mappingValue(mapping, "shared") != nil {
+		return errors.New("project configuration cannot set shared control profiles")
 	}
 
 	return nil
