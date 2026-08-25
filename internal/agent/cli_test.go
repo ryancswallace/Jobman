@@ -125,8 +125,9 @@ func TestExecuteCLIExtendedAgentBoundaries(t *testing.T) {
 			"run-execution", "--state-dir", stateDirectory, "--execution-id", testExecutionID,
 			"--artifact-store", "Bad Name", "--artifact-root", t.TempDir(),
 		},
-		"install host boundary": {
+		"install missing binary": {
 			"install-service", "--state-dir", stateDirectory,
+			"--agent-binary", filepath.Join(t.TempDir(), "missing"),
 		},
 		"enroll missing CA": {
 			"enroll", "--state-dir", t.TempDir(), "--server", "https://control.example.test",
