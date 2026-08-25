@@ -13,6 +13,7 @@ SYSTEMD_PAGER := cat
 export PAGER GIT_PAGER GH_PAGER MANPAGER SYSTEMD_PAGER
 
 PROJECT := jobman
+AGENT_PROJECT := jobman-agent
 MODULE := github.com/ryancswallace/jobman
 
 BIN_DIR := bin
@@ -443,13 +444,14 @@ docs-site-check: gen-site ## Build the staged GitHub Pages site with its product
 docs: gen-manpage gen-completions gen-site docs-check spellcheck docs-site-check ## Generate and validate documentation.
 
 .PHONY: build
-build: ## Build the jobman binary for the current platform.
+build: ## Build the jobman and jobman-agent binaries for the current platform.
 	mkdir -p $(BIN_DIR)
 	$(GO) build $(GO_BUILD_FLAGS) -ldflags='$(GO_LDFLAGS)' -o $(BIN_DIR)/$(PROJECT) .
+	$(GO) build $(GO_BUILD_FLAGS) -ldflags='$(GO_LDFLAGS)' -o $(BIN_DIR)/$(AGENT_PROJECT) ./cmd/jobman-agent
 
 .PHONY: install
-install: ## Install jobman with the active Go toolchain.
-	$(GO) install $(GO_BUILD_FLAGS) -ldflags='$(GO_LDFLAGS)' .
+install: ## Install jobman and jobman-agent with the active Go toolchain.
+	$(GO) install $(GO_BUILD_FLAGS) -ldflags='$(GO_LDFLAGS)' . ./cmd/jobman-agent
 
 .PHONY: run
 run: build ## Build and run jobman; pass arguments with ARGS='...'.

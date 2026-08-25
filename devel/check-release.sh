@@ -82,10 +82,12 @@ check_artifacts() {
 		linux/386 | linux/amd64 | linux/arm64 | darwin/amd64 | darwin/arm64)
 			native_archive=$dist/jobman_${release_version}_${host_os}_${host_arch}.tar.gz
 			native_binary=jobman
+			native_agent_binary=jobman-agent
 			;;
 		windows/386 | windows/amd64 | windows/arm64)
 			native_archive=$dist/jobman_${release_version}_${host_os}_${host_arch}.zip
 			native_binary=jobman.exe
+			native_agent_binary=jobman-agent.exe
 			;;
 		*) die "unsupported release-check host: ${host_os}/${host_arch}" ;;
 	esac
@@ -98,7 +100,7 @@ check_artifacts() {
 	tar -tzf "$content_archive" >"$temporary/contents"
 
 	for required in \
-		jobman LICENSE THIRD_PARTY_NOTICES.md README.md CHANGELOG.md CITATION.cff \
+		jobman jobman-agent LICENSE THIRD_PARTY_NOTICES.md README.md CHANGELOG.md CITATION.cff \
 		CODE_OF_CONDUCT.md CONTRIBUTING.md RELEASE.md SECURITY.md SUPPORT.md \
 		assets/logo.svg assets/logo-dark-transparent.svg \
 		etc/jobman/jobman.yml docs/COMPATIBILITY.md docs/CONFIGURATION.md \
@@ -116,8 +118,8 @@ check_artifacts() {
 	tar -xzf "$content_archive" -C "$temporary/extract" \
 		CHANGELOG.md CITATION.cff THIRD_PARTY_NOTICES.md
 	case $native_archive in
-		*.tar.gz) tar -xzf "$native_archive" -C "$temporary/extract" "$native_binary" ;;
-		*.zip) unzip -qq "$native_archive" "$native_binary" -d "$temporary/extract" ;;
+		*.tar.gz) tar -xzf "$native_archive" -C "$temporary/extract" "$native_binary" "$native_agent_binary" ;;
+		*.zip) unzip -qq "$native_archive" "$native_binary" "$native_agent_binary" -d "$temporary/extract" ;;
 	esac
 	binary_version=$(
 		"$temporary/extract/$native_binary" --version |
@@ -126,6 +128,12 @@ check_artifacts() {
 	[ -n "$binary_version" ] || die 'could not read the packaged binary version'
 	[ "$binary_version" = "$release_version" ] ||
 		die "packaged binary reports $binary_version; expected $release_version"
+	agent_version=$(
+		"$temporary/extract/$native_agent_binary" version |
+			awk 'NR == 1 { print $2 }'
+	)
+	[ "$agent_version" = "$release_version" ] ||
+		die "packaged agent reports $agent_version; expected $release_version"
 	if printf '%s\n' "$binary_version" |
 		grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
 		grep -E "^## \[$binary_version\] - [0-9]{4}-[0-9]{2}-[0-9]{2}$" \

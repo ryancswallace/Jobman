@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jobman.tech/schema/protocol/job-request-v1alpha1.schema.json",
+  "title": "Jobman shared job request v1alpha1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "properties": {
+    "apiVersion": {"const": "jobman/v1alpha1"},
+    "kind": {"const": "JobRequest"},
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["namespace", "name"],
+      "properties": {
+        "namespace": {"$ref": "workload-v1alpha1.schema.json#/$defs/name"},
+        "name": {"$ref": "workload-v1alpha1.schema.json#/$defs/name"},
+        "labels": {"$ref": "workload-v1alpha1.schema.json#/$defs/nameMap"}
+      }
+    },
+    "spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["workload", "placement"],
+      "properties": {
+        "workload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["digest", "document"],
+          "properties": {
+            "digest": {"$ref": "workload-v1alpha1.schema.json#/$defs/digest"},
+            "document": {"$ref": "workload-v1alpha1.schema.json"}
+          }
+        },
+        "placement": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["target"],
+          "properties": {
+            "target": {"$ref": "workload-v1alpha1.schema.json#/$defs/name"},
+            "partition": {"$ref": "workload-v1alpha1.schema.json#/$defs/name"}
+          }
+        }
+      }
+    }
+  }
+}

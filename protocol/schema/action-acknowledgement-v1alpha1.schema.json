@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jobman.tech/schema/protocol/action-acknowledgement-v1alpha1.schema.json",
+  "title": "Jobman action acknowledgement v1alpha1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "metadata"],
+  "properties": {
+    "apiVersion": {"const": "jobman/v1alpha1"},
+    "kind": {"const": "ActionAcknowledgement"},
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["actionId", "executionId", "agentId", "revision", "observedAt"],
+      "properties": {
+        "actionId": {"$ref": "#/$defs/id"},
+        "executionId": {"$ref": "#/$defs/id"},
+        "agentId": {"$ref": "#/$defs/id"},
+        "revision": {"type": "integer", "minimum": 1},
+        "observedAt": {"type": "string", "format": "date-time"}
+      }
+    }
+  },
+  "$defs": {"id": {"type": "string", "format": "uuid"}}
+}

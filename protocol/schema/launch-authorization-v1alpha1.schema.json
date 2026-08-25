@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jobman.tech/schema/protocol/launch-authorization-v1alpha1.schema.json",
+  "title": "Jobman launch authorization v1alpha1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "properties": {
+    "apiVersion": {"const": "jobman/v1alpha1"},
+    "kind": {"const": "LaunchAuthorization"},
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["authorizationId", "executionId", "agentId", "revision", "acceptedAt"],
+      "properties": {
+        "authorizationId": {"$ref": "#/$defs/id"},
+        "executionId": {"$ref": "#/$defs/id"},
+        "agentId": {"$ref": "#/$defs/id"},
+        "revision": {"type": "integer", "minimum": 1},
+        "acceptedAt": {"type": "string", "format": "date-time"}
+      }
+    },
+    "spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["targetGenerationId", "effectiveExecutionDigest"],
+      "properties": {
+        "targetGenerationId": {"$ref": "#/$defs/id"},
+        "effectiveExecutionDigest": {"$ref": "#/$defs/digest"}
+      }
+    }
+  },
+  "$defs": {
+    "id": {"type": "string", "format": "uuid"},
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}

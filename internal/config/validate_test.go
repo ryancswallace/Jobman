@@ -1,6 +1,7 @@
 package config
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -8,6 +9,7 @@ import (
 
 func TestConfigurationValidationFailures(t *testing.T) {
 	t.Parallel()
+	tokenPath := filepath.Join(t.TempDir(), "token")
 
 	tests := map[string]struct {
 		mutate func(*Config)
@@ -121,6 +123,66 @@ func TestConfigurationValidationFailures(t *testing.T) {
 				configuration.Profiles["bad"] = Profile{JobSpec: "missing"}
 			},
 			want: "unknown job spec",
+		},
+		"shared current profile missing": {
+			mutate: func(configuration *Config) {
+				configuration.Shared.CurrentProfile = "missing"
+			},
+			want: "unknown profile",
+		},
+		"shared namespace invalid": {
+			mutate: func(configuration *Config) {
+				configuration.Shared.Profiles["department"] = SharedProfile{
+					Endpoint: "https://jobman.example.edu", Namespace: "Not Portable",
+				}
+			},
+			want: "invalid namespace",
+		},
+		"shared endpoint insecure": {
+			mutate: func(configuration *Config) {
+				configuration.Shared.Profiles["department"] = SharedProfile{
+					Endpoint: "http://jobman.example.edu", Namespace: "research",
+				}
+			},
+			want: "must use HTTPS",
+		},
+		"shared token over HTTP": {
+			mutate: func(configuration *Config) {
+				configuration.Shared.Profiles["department"] = SharedProfile{
+					Endpoint: "http://127.0.0.1:8080", Namespace: "research", TokenFile: tokenPath,
+				}
+			},
+			want: "cannot send a token over HTTP",
+		},
+		"shared credential path relative": {
+			mutate: func(configuration *Config) {
+				configuration.Shared.Profiles["department"] = SharedProfile{
+					Endpoint: "https://jobman.example.edu", Namespace: "research", TokenFile: "token",
+				}
+			},
+			want: "clean absolute path",
+		},
+		"shared artifact version invalid": {
+			mutate: func(configuration *Config) {
+				configuration.Shared.Profiles["department"] = SharedProfile{
+					Endpoint: "https://jobman.example.edu", Namespace: "research",
+					ArtifactRoots: map[string]SharedArtifactRoot{
+						"department-nfs": {Path: "/nfs/jobman"},
+					},
+				}
+			},
+			want: "version must be positive",
+		},
+		"shared artifact path relative": {
+			mutate: func(configuration *Config) {
+				configuration.Shared.Profiles["department"] = SharedProfile{
+					Endpoint: "https://jobman.example.edu", Namespace: "research",
+					ArtifactRoots: map[string]SharedArtifactRoot{
+						"department-nfs": {Version: 1, Path: "relative"},
+					},
+				}
+			},
+			want: "clean absolute path",
 		},
 	}
 

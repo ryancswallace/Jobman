@@ -26,6 +26,7 @@ const (
 	referenceParent   = "Reference"
 	operationsParent  = "Operations"
 	projectParent     = "Project"
+	sharedModeSiteURL = "({{ site.baseurl }}/guides/shared-mode/)"
 )
 
 type publishedPage struct {
@@ -40,6 +41,7 @@ type publishedPage struct {
 
 var publishedPages = []publishedPage{
 	{source: "docs/CONTAINERS.md", destination: "guides/containers.md", title: "Containers", parent: "User guides", permalink: "/guides/containers/", navOrder: 9},
+	{source: "docs/SHARED_MODE.md", destination: "guides/shared-mode.md", title: "Shared-mode preview", parent: "User guides", permalink: "/guides/shared-mode/", navOrder: 10},
 	{source: "docs/CONFIGURATION.md", destination: "reference/configuration.md", title: "Configuration schema", parent: referenceParent, permalink: "/reference/configuration/", navOrder: 2},
 	{source: "docs/COMPATIBILITY.md", destination: "reference/compatibility.md", title: "Compatibility contract", parent: referenceParent, permalink: "/reference/compatibility/", navOrder: 5},
 	{source: "docs/design/PLATFORM_CAPABILITIES.md", destination: "reference/platforms.md", title: "Platform support", parent: referenceParent, permalink: "/reference/platforms/", navOrder: 4},
@@ -51,6 +53,7 @@ var publishedPages = []publishedPage{
 	{source: "RELEASE.md", destination: "project/releasing.md", title: "Release process", parent: projectParent, permalink: "/project/releasing/", navOrder: 4},
 	{source: "docs/DOGFOOD.md", destination: "project/dogfood.md", title: "Dogfood runbook", parent: projectParent, permalink: "/project/dogfood/", navOrder: 5},
 	{source: "CHANGELOG.md", destination: "project/changelog.md", title: "Changelog", parent: projectParent, permalink: "/project/changelog/", navOrder: 6},
+	{source: "docs/design/DISTRIBUTED_MODE.md", destination: "project/distributed-mode.md", title: "Distributed-mode design", parent: projectParent, permalink: "/project/distributed-mode/", navOrder: 7},
 }
 
 var demoRecordings = []string{"basic.webm", "dependencies.webm", "input.webm", "retries.webm", "timeouts.webm"}
@@ -62,6 +65,12 @@ var canonicalLinkReplacements = map[string]string{
 	"(CHANGELOG.md)":                     "({{ site.baseurl }}/project/changelog/)",
 	"(LICENSE)":                          "(https://github.com/ryancswallace/jobman/blob/main/LICENSE)",
 	"(docs/CONTAINERS.md)":               "({{ site.baseurl }}/guides/containers/)",
+	"(docs/SHARED_MODE.md)":              sharedModeSiteURL,
+	"(SHARED_MODE.md)":                   sharedModeSiteURL,
+	"(AGENT.md)":                         "(https://github.com/ryancswallace/jobman/blob/main/docs/AGENT.md)",
+	"(design/DISTRIBUTED_MODE.md)":       "({{ site.baseurl }}/project/distributed-mode/)",
+	"(../SHARED_MODE.md)":                sharedModeSiteURL,
+	"(SPEC.md)":                          "(https://github.com/ryancswallace/jobman/blob/main/docs/design/SPEC.md)",
 	"(SUPPORT.md)":                       "({{ site.baseurl }}/operations/support/)",
 	"(SPEC.md#17-platform-requirements)": "({{ site.baseurl }}/project/design/#platform-and-process-model)",
 	"(adr/0001-per-job-supervisor.md)":   "({{ site.baseurl }}/project/design/#architectural-decisions)",

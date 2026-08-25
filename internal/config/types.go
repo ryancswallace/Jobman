@@ -27,6 +27,8 @@ const (
 	waitModeAll    = "all"
 	waitModeAny    = "any"
 	fileKind       = "file"
+	httpScheme     = "http"
+	httpsScheme    = "https"
 )
 
 // Config is Jobman's complete, effective configuration.
@@ -40,7 +42,32 @@ type Config struct {
 	Retention           Retention                `yaml:"retention" json:"retention"`
 	Notifiers           map[string]Notifier      `yaml:"notifiers" json:"notifiers"`
 	Profiles            map[string]Profile       `yaml:"profiles" json:"profiles"`
+	Shared              SharedConfig             `yaml:"shared" json:"shared"`
 	Redaction           RedactionConfig          `yaml:"redaction" json:"redaction"`
+}
+
+// SharedConfig contains explicitly selected pre-release control-service profiles.
+// It is separate from Profiles, which remains the frozen v1 job-spec overlay feature.
+type SharedConfig struct {
+	CurrentProfile string                   `yaml:"current_profile,omitempty" json:"current_profile,omitempty"`
+	Profiles       map[string]SharedProfile `yaml:"profiles" json:"profiles"`
+}
+
+// SharedProfile selects one Jobman Control state universe and credential source.
+// Bearer tokens are read from TokenFile and are never embedded in configuration.
+type SharedProfile struct {
+	Endpoint      string                        `yaml:"endpoint" json:"endpoint"`
+	Namespace     string                        `yaml:"namespace" json:"namespace"`
+	TokenFile     string                        `yaml:"token_file,omitempty" json:"token_file,omitempty"`
+	CAFile        string                        `yaml:"ca_file,omitempty" json:"ca_file,omitempty"`
+	ArtifactRoots map[string]SharedArtifactRoot `yaml:"artifact_roots,omitempty" json:"artifact_roots,omitempty"`
+}
+
+// SharedArtifactRoot maps one versioned logical filesystem store to its mount
+// path on the current client host.
+type SharedArtifactRoot struct {
+	Version int64  `yaml:"version" json:"version"`
+	Path    string `yaml:"path" json:"path"`
 }
 
 // JobSpec is a reusable, direct-execution job specification.
@@ -507,7 +534,7 @@ func validateHTTPURL(notifier HTTPNotifier) error {
 	if parsed.Host == "" || parsed.User != nil || parsed.Fragment != "" {
 		return errors.New("URL must have a host and must not contain user information or a fragment")
 	}
-	if parsed.Scheme != "https" && (parsed.Scheme != "http" || !notifier.AllowHTTP) {
+	if parsed.Scheme != httpsScheme && (parsed.Scheme != httpScheme || !notifier.AllowHTTP) {
 		return errors.New("URL must use HTTPS unless allow_http is true")
 	}
 	if !notifier.AllowPrivateHosts && privateHTTPHost(parsed.Hostname()) {

@@ -1,3 +1,5 @@
+<!-- cspell:ignore Slurm -->
+
 # Jobman design
 
 The [formal design specification](SPEC.md) records Jobman's v1 behavior,
@@ -20,6 +22,37 @@ The corresponding
 [diagnosis implementation plan](DIAGNOSIS_IMPLEMENTATION_PLAN.md) divides that
 proposal into independently releasable core, companion, provider, evaluation,
 and enrichment work packages.
+
+A post-v1 [shared and distributed execution design](DISTRIBUTED_MODE.md)
+introduces PostgreSQL-backed shared state, a first-class per-user agent,
+subprocess and Slurm backends, portable workloads, artifact staging, remote
+placement, collections/graphs, and namespace-based authorization. It preserves
+the frozen standalone contract and explicitly distinguishes the implemented
+initial pass from remaining deployment and production-acceptance work.
+
+The pre-release `protocol/` package now implements the portable workload,
+job-request, effective-execution, assignment, acceptance, launch-authorization,
+execution-event, desired-action, acknowledgement, and process-result
+`v1alpha1` contracts with schemas and conformance tests. The separate Jobman
+Control repository implements PostgreSQL/OIDC/RBAC state, target and agent
+enrollment, mTLS agent authentication, durable acceptance, execution events,
+and cancellation intent. This repository now includes the pre-release
+`jobman-agent` named-host subprocess data plane described in
+[the agent guide](../AGENT.md), plus the separate
+[`jobman shared` client lifecycle](../SHARED_MODE.md) for target inspection,
+submission, listing, status, wait, cancellation, and durable client-side
+submission recovery. The current preview also includes bounded Slurm CLI
+execution, target draining and agent capability/liveness observations,
+rotating sessions, Linux systemd user-service and OpenSSH bootstrap support,
+local/NFS or S3 regular-file staging, Docker/Podman and Apptainer container
+adapters, ParallelCluster target generations, transactional collections, and
+native Slurm arrays with independent child outcomes. The first complete
+control-plane pass also includes immutable cross-target dependency graphs,
+completed-history import, namespace quotas, fair dispatch, bounded metrics,
+audit export, operational retention, and a persistent post-restore assignment
+hold. Standalone Slurm, directory/archive artifacts, retries, per-execution
+credential brokering, and real department-scale acceptance remain
+unimplemented or unverified.
 
 The implementation's storage formats and measured portability are recorded
 separately in the [persisted-schema reference](PERSISTED_SCHEMA.md) and

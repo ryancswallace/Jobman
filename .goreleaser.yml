@@ -38,11 +38,36 @@ builds:
       # Go does not support 32-bit Darwin.
       - goos: darwin
         goarch: "386"
+  - id: jobman-agent
+    main: ./cmd/jobman-agent
+    binary: jobman-agent
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+      - -mod=readonly
+    ldflags:
+      - -s -w -buildid=
+      - -X github.com/ryancswallace/jobman/internal/buildinfo.Version={{ .Version }}
+      - -X github.com/ryancswallace/jobman/internal/buildinfo.Commit={{ .FullCommit }}
+      - -X github.com/ryancswallace/jobman/internal/buildinfo.Date={{ .Date }}
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+      - "386"
+    ignore:
+      - goos: darwin
+        goarch: "386"
 
 archives:
   - id: jobman
     ids:
       - jobman
+      - jobman-agent
     formats:
       - tar.gz
     format_overrides:
@@ -91,6 +116,7 @@ nfpms:
   - id: jobman
     ids:
       - jobman
+      - jobman-agent
     package_name: jobman
     vendor: jobman contributors
     homepage: https://github.com/ryancswallace/jobman

@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jobman.tech/schema/protocol/execution-event-v1alpha1.schema.json",
+  "title": "Jobman execution event v1alpha1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "properties": {
+    "apiVersion": {"const": "jobman/v1alpha1"},
+    "kind": {"const": "ExecutionEvent"},
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["eventId", "executionId", "agentId", "sequence", "observedAt"],
+      "properties": {
+        "eventId": {"$ref": "#/$defs/id"},
+        "executionId": {"$ref": "#/$defs/id"},
+        "agentId": {"$ref": "#/$defs/id"},
+        "sequence": {"type": "integer", "minimum": 1},
+        "observedAt": {"type": "string", "format": "date-time"}
+      }
+    },
+    "spec": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "nativeId"],
+          "properties": {
+            "type": {"const": "process.started"},
+            "nativeId": {"type": "string", "minLength": 1, "maxLength": 4096}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "result"],
+          "properties": {
+            "type": {"const": "process.completed"},
+            "result": {"$ref": "#/$defs/result"},
+            "artifacts": {
+              "type": "array",
+              "maxItems": 4096,
+              "items": {"$ref": "#/$defs/artifact"}
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "scheduler"],
+          "properties": {
+            "type": {"const": "scheduler.uncertain"},
+            "scheduler": {
+              "allOf": [
+                {"$ref": "#/$defs/scheduler"},
+                {"type": "object", "properties": {"state": {"const": "uncertain"}}}
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "nativeId", "scheduler"],
+          "properties": {
+            "type": {"const": "scheduler.submitted"},
+            "nativeId": {"type": "string", "minLength": 1, "maxLength": 4096},
+            "scheduler": {
+              "allOf": [
+                {"$ref": "#/$defs/scheduler"},
+                {"type": "object", "properties": {"state": {"enum": ["queued", "unknown"]}}}
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "nativeId", "scheduler"],
+          "properties": {
+            "type": {"const": "scheduler.observed"},
+            "nativeId": {"type": "string", "minLength": 1, "maxLength": 4096},
+            "scheduler": {
+              "allOf": [
+                {"$ref": "#/$defs/scheduler"},
+                {"type": "object", "properties": {"state": {"enum": ["queued", "running", "suspended", "completing", "unknown"]}}}
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "nativeId", "scheduler", "result"],
+          "properties": {
+            "type": {"const": "scheduler.completed"},
+            "nativeId": {"type": "string", "minLength": 1, "maxLength": 4096},
+            "scheduler": {
+              "allOf": [
+                {"$ref": "#/$defs/scheduler"},
+                {"type": "object", "properties": {"state": {"enum": ["completed", "failed", "cancelled", "timed_out", "preempted", "node_failed", "out_of_memory", "boot_failed", "deadline", "lost"]}}}
+              ]
+            },
+            "result": {"$ref": "#/$defs/result"},
+            "artifacts": {
+              "type": "array",
+              "maxItems": 4096,
+              "items": {"$ref": "#/$defs/artifact"}
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "id": {"type": "string", "format": "uuid"},
+    "scheduler": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["backend", "state"],
+      "properties": {
+        "backend": {"const": "slurm"},
+        "state": {"type": "string"},
+        "reason": {"type": "string", "maxLength": 4096},
+        "cluster": {"type": "string", "maxLength": 128}
+      }
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["outcome"],
+      "properties": {
+        "outcome": {"enum": ["success", "failure", "cancelled", "timed_out", "aborted", "lost"]},
+        "exitCode": {"type": "integer", "minimum": -1, "maximum": 255},
+        "signal": {"type": "string", "maxLength": 128},
+        "failureCode": {"type": "string", "maxLength": 128}
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "storeName", "storeVersion", "objectKey", "byteLength", "checksum"],
+      "properties": {
+        "name": {"$ref": "workload-v1alpha1.schema.json#/$defs/name"},
+        "storeName": {"$ref": "workload-v1alpha1.schema.json#/$defs/name"},
+        "storeVersion": {"type": "integer", "minimum": 1},
+        "objectKey": {"type": "string", "minLength": 1, "maxLength": 65536},
+        "byteLength": {"type": "integer", "minimum": 0},
+        "checksum": {"$ref": "workload-v1alpha1.schema.json#/$defs/digest"}
+      }
+    }
+  }
+}

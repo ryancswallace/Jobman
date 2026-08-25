@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jobman.tech/schema/protocol/agent-assignment-v1alpha1.schema.json",
+  "title": "Jobman agent assignment v1alpha1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "properties": {
+    "apiVersion": {"const": "jobman/v1alpha1"},
+    "kind": {"const": "AgentAssignment"},
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["deliveryId", "agentId"],
+      "properties": {
+        "deliveryId": {"$ref": "effective-execution-v1alpha1.schema.json#/$defs/id"},
+        "agentId": {"$ref": "effective-execution-v1alpha1.schema.json#/$defs/id"}
+      }
+    },
+    "spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["effectiveExecutionDigest", "effectiveExecution"],
+      "properties": {
+        "effectiveExecutionDigest": {"$ref": "workload-v1alpha1.schema.json#/$defs/digest"},
+        "effectiveExecution": {"$ref": "effective-execution-v1alpha1.schema.json"}
+      }
+    }
+  }
+}

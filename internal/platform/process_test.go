@@ -90,6 +90,31 @@ func TestProcessOperationsTreatGoneProcessAsComplete(t *testing.T) {
 	}
 }
 
+func TestProcessOperationFailuresAreWrapped(t *testing.T) {
+	t.Parallel()
+	identity, err := Inspect(os.Getpid())
+	if err != nil {
+		t.Fatal(err)
+	}
+	failure := errors.New("operation denied")
+	operations := map[string]func() error{
+		"terminate": func() error {
+			return terminateWithOperation(identity, false, func(ProcessIdentity, bool) error { return failure })
+		},
+		"pause": func() error {
+			return pauseWithOperation(identity, func(ProcessIdentity) error { return failure })
+		},
+		"resume": func() error {
+			return resumeWithOperation(identity, func(ProcessIdentity) error { return failure })
+		},
+	}
+	for name, operation := range operations {
+		if operationErr := operation(); !errors.Is(operationErr, failure) {
+			t.Errorf("%s error = %v", name, operationErr)
+		}
+	}
+}
+
 func TestProcessOperationsAndConfiguration(t *testing.T) {
 	if !PauseResumeSupported() {
 		t.Skip("managed-tree pause and resume are unavailable")

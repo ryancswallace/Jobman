@@ -1,0 +1,38 @@
+{
+  "apiVersion": "jobman/v1alpha1",
+  "kind": "JobRequest",
+  "metadata": {
+    "namespace": "research",
+    "name": "minimal-job"
+  },
+  "spec": {
+    "workload": {
+      "digest": "sha256:eb0a1173adb99e86e4e10059248fd642f6b505702d43765cf7a904684aefde01",
+      "document": {
+        "apiVersion": "jobman/v1alpha1",
+        "kind": "Workload",
+        "metadata": {
+          "name": "minimal"
+        },
+        "spec": {
+          "command": {
+            "executable": "true"
+          },
+          "workingDirectory": "workspace:/",
+          "runtime": {
+            "kind": "native"
+          },
+          "policy": {
+            "retry": {
+              "maxRuns": 1
+            },
+            "duplicateRisk": "reject"
+          }
+        }
+      }
+    },
+    "placement": {
+      "target": "workstation-a"
+    }
+  }
+}

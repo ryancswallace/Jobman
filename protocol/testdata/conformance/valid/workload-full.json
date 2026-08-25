@@ -1,0 +1,97 @@
+{
+  "apiVersion": "jobman/v1alpha1",
+  "kind": "Workload",
+  "metadata": {
+    "name": "train-model",
+    "description": "Portable container training workload",
+    "labels": {
+      "project": "example"
+    },
+    "annotations": {
+      "owner": "research"
+    }
+  },
+  "spec": {
+    "command": {
+      "executable": "python",
+      "args": [
+        "train.py",
+        "--input",
+        "inputs/dataset/data.parquet",
+        "--output",
+        "outputs/model"
+      ]
+    },
+    "workingDirectory": "workspace:/",
+    "environment": {
+      "profile": "python-research-v3",
+      "values": {
+        "OMP_NUM_THREADS": "4"
+      },
+      "secrets": [
+        {
+          "name": "experiment-token",
+          "source": "secret://research/experiment-token",
+          "exposeAs": {
+            "environment": "EXPERIMENT_TOKEN"
+          }
+        }
+      ]
+    },
+    "resources": {
+      "cpu": 4,
+      "memory": "16GiB",
+      "gpu": 1,
+      "nodes": 1,
+      "tasks": 1,
+      "wallTime": "2h"
+    },
+    "runtime": {
+      "kind": "container",
+      "container": {
+        "image": "registry.example.edu/research/trainer@sha256:0123456789abcdef",
+        "pullPolicy": "if-not-present",
+        "network": "restricted"
+      }
+    },
+    "artifacts": {
+      "inputs": [
+        {
+          "name": "dataset",
+          "source": "artifact://department-data/training/v4",
+          "target": "inputs:/dataset",
+          "checksum": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "model",
+          "source": "outputs:/model",
+          "destination": "artifact://research-results/models",
+          "required": true
+        }
+      ]
+    },
+    "policy": {
+      "runTimeout": "2h15m",
+      "retry": {
+        "maxRuns": 3,
+        "backoff": "5m"
+      },
+      "duplicateRisk": "reject"
+    },
+    "requirements": {
+      "architectures": [
+        "amd64"
+      ],
+      "capabilities": [
+        "gpu"
+      ]
+    },
+    "extensions": {
+      "slurm": {
+        "constraint": "a100"
+      }
+    }
+  }
+}

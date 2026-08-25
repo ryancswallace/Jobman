@@ -1,0 +1,11 @@
+{
+  "apiVersion": "jobman/v1alpha1",
+  "kind": "Workload",
+  "metadata": {},
+  "spec": {
+    "command": {
+      "executable": "true"
+    },
+    "unknown": true
+  }
+}

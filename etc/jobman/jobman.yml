@@ -167,6 +167,24 @@ schema_version: 1
 #         run: 2m
 #         job: 10m
 
+# Pre-release shared-mode profiles select one Jobman Control endpoint and
+# namespace. They are separate from standalone job-spec profiles. Bearer-token
+# contents are read from a private file for each request and are never embedded
+# here. Loopback HTTP is allowed only without a token for explicit development
+# mode; ordinary deployments must use HTTPS.
+# shared:
+#   current_profile: department
+#   profiles:
+#     department:
+#       endpoint: https://jobman-control.example.edu
+#       namespace: research
+#       token_file: /home/example/.config/jobman/control-token
+#       ca_file: /home/example/.config/jobman/control-ca.pem
+#       artifact_roots:
+#         department-nfs:
+#           version: 1
+#           path: /nfs/jobman-artifacts
+
 # User configuration may opt in to project discovery by listing clean absolute
 # project roots. System and project files are forbidden from granting this
 # trust themselves:

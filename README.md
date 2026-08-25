@@ -52,6 +52,24 @@ notifications without a resident service.
 > end with the operating-system user session. Back up important state and logs
 > independently.
 
+The distribution also contains explicitly pre-release named-host subprocess
+and on-premises Slurm slices for the separate Jobman Control design:
+`jobman-agent` runs target-side work or submits it from a Linux Slurm submit
+host, while the additive `jobman shared` command group submits and manages that
+work through the control API. Target-approved local/NFS or S3 stores carry
+bounded, checksummed stdout/stderr chunks and immutable declared regular-file
+artifacts. The preview also includes Docker/Podman and Apptainer runtime
+adapters, ParallelCluster target generations, transactional collections, and
+native Slurm-array compilation with independent child jobs. Immutable
+cross-target dependency graphs, completed standalone-history import, and
+Control-side namespace quotas, fair dispatch, audit export, retention, and
+recovery controls complete the initial control-plane pass. Linux agents
+support a hardened systemd user service and one-time OpenSSH bootstrap; SSH is
+not a steady-state executor. Standalone commands and their local SQLite state
+are unchanged. See the [shared-mode preview](docs/SHARED_MODE.md)
+and [agent guide](docs/AGENT.md) for their security boundaries and current
+limitations.
+
 ## Command overview
 
 | Task | Commands |
@@ -119,6 +137,7 @@ platform differences are documented in the [platform support reference].
 | Troubleshooting and recovery | [Operations guides] |
 | Architecture | [Design documentation] |
 | Diagnostic evidence | [Evidence schema and privacy reference] |
+| Shared-mode preview | [Shared-mode preview guide] |
 | Releases | [Release and artifact verification guide] |
 
 Use the [issue tracker] for reproducible bugs and feature proposals. Report
@@ -162,4 +181,5 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution requirements.
 [release and artifact verification guide]: RELEASE.md
 [sample configuration]: etc/jobman/jobman.yml
 [security policy]: SECURITY.md
+[shared-mode preview guide]: docs/SHARED_MODE.md
 [user guides]: https://jobman.tech/guides/

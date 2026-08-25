@@ -187,7 +187,7 @@ func TestCloudsmithPublicationUsesProtectedAPIKeyAndIsRepairable(t *testing.T) {
 		for _, required := range []string{
 			"environment:",
 			"name: main",
-			"cloudsmith-io/cloudsmith-cli-action@db783de9f6e7a445e5e31d94f4210303b48a10a3",
+			"cloudsmith-io/cloudsmith-cli-action@ad73fafb92e3e29a5166c529464c2df7658a608e",
 			"api-key: ${{ secrets.CLOUDSMITH_API_KEY }}",
 			"cli-version: 1.21.0",
 			"CLOUDSMITH_API_KEY: ${{ secrets.CLOUDSMITH_API_KEY }}",

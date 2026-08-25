@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -15,6 +16,7 @@ import (
 	"github.com/ryancswallace/jobman/internal/app"
 	"github.com/ryancswallace/jobman/internal/buildinfo"
 	"github.com/ryancswallace/jobman/internal/config"
+	"github.com/ryancswallace/jobman/internal/controlclient"
 	"github.com/ryancswallace/jobman/internal/model"
 )
 
@@ -41,6 +43,8 @@ type dependencies struct {
 	Environment  func() []string
 	Getenv       func(string) string
 	RunExtension runExtensionFunc
+	OpenControl  openSharedControlFunc
+	LoadConfig   func(*rootOptions) (config.Loaded, error)
 }
 
 type rootOptions struct {
@@ -112,6 +116,7 @@ func newRootCommand(dependencies dependencies) *cobra.Command {
 		newCleanCommand(dependencies, options),
 		newDoctorCommand(dependencies, options),
 		newConfigCommand(dependencies, options),
+		newSharedCommand(dependencies, options),
 		newSupervisorCommand(dependencies, options),
 	)
 
@@ -136,6 +141,10 @@ func Execute() error {
 func ExitCode(err error) int {
 	var validationError *model.ValidationError
 	var extensionError *extensionExitError
+	var controlError *controlclient.APIError
+	if errors.As(err, &controlError) {
+		return controlExitCode(controlError.StatusCode)
+	}
 
 	switch {
 	case err == nil:
@@ -156,6 +165,19 @@ func ExitCode(err error) int {
 		return 5
 	case errors.Is(err, io.ErrShortWrite):
 		return 6
+	default:
+		return 1
+	}
+}
+
+func controlExitCode(status int) int {
+	switch status {
+	case http.StatusBadRequest, http.StatusUnprocessableEntity:
+		return 2
+	case http.StatusNotFound:
+		return 3
+	case http.StatusConflict:
+		return 5
 	default:
 		return 1
 	}

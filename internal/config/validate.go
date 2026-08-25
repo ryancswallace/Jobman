@@ -6,6 +6,7 @@ import (
 	"math"
 	"net"
 	"net/mail"
+	"net/url"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -27,7 +28,11 @@ const (
 	maxConfiguredSecrets   = 256
 )
 
-var configuredNamePattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)
+var (
+	configuredNamePattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)
+	sharedNamePattern     = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9._-]{0,126}[a-z0-9])?$`)
+	artifactStorePattern  = regexp.MustCompile(`^[a-z](?:[a-z0-9._-]{0,62}[a-z0-9])?$`)
+)
 
 var knownNotificationEvents = map[string]struct{}{
 	"job_started":           {},
@@ -77,6 +82,9 @@ func (configuration Config) Validate() error {
 		return err
 	}
 	if err := validateProfiles(configuration); err != nil {
+		return err
+	}
+	if err := validateShared(configuration.Shared); err != nil {
 		return err
 	}
 	if _, err := NewRedactor(configuration.Redaction, nil); err != nil {
@@ -165,6 +173,15 @@ func ensureTopLevelMaps(configuration *Config) {
 	}
 	if configuration.Profiles == nil {
 		configuration.Profiles = map[string]Profile{}
+	}
+	if configuration.Shared.Profiles == nil {
+		configuration.Shared.Profiles = map[string]SharedProfile{}
+	}
+	for name, profile := range configuration.Shared.Profiles {
+		if profile.ArtifactRoots == nil {
+			profile.ArtifactRoots = map[string]SharedArtifactRoot{}
+			configuration.Shared.Profiles[name] = profile
+		}
 	}
 	if configuration.Redaction.Names == nil {
 		configuration.Redaction.Names = []string{}
@@ -512,7 +529,7 @@ func validateNotifier(notifier Notifier, secrets map[string]SecretRef) error {
 			return errors.New("type command requires command configuration")
 		}
 		return validateCommandNotifier(*notifier.Command, secrets)
-	case "http":
+	case httpScheme:
 		if notifier.HTTP == nil {
 			return errors.New("type http requires http configuration")
 		}
@@ -716,6 +733,90 @@ func validateProfiles(configuration Config) error {
 	}
 
 	return nil
+}
+
+func validateShared(shared SharedConfig) error {
+	if shared.CurrentProfile != "" {
+		if _, found := shared.Profiles[shared.CurrentProfile]; !found {
+			return fmt.Errorf("shared.current_profile references unknown profile %q", shared.CurrentProfile)
+		}
+	}
+	for _, name := range sortedMapKeys(shared.Profiles) {
+		if err := validateSharedProfile(name, shared.Profiles[name]); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func validateSharedProfile(name string, profile SharedProfile) error {
+	if err := validateConfiguredName("shared profile", name); err != nil {
+		return err
+	}
+	if !sharedNamePattern.MatchString(profile.Namespace) {
+		return fmt.Errorf("shared profile %q has invalid namespace", name)
+	}
+	parsed, err := validateSharedEndpoint(name, profile.Endpoint)
+	if err != nil {
+		return err
+	}
+	if err := validateSharedPath(name, "token_file", profile.TokenFile); err != nil {
+		return err
+	}
+	if err := validateSharedPath(name, "ca_file", profile.CAFile); err != nil {
+		return err
+	}
+	if parsed.Scheme == httpScheme && profile.TokenFile != "" {
+		return fmt.Errorf("shared profile %q cannot send a token over HTTP", name)
+	}
+	for _, storeName := range sortedMapKeys(profile.ArtifactRoots) {
+		mapping := profile.ArtifactRoots[storeName]
+		if !artifactStorePattern.MatchString(storeName) {
+			return fmt.Errorf("shared profile %q has invalid artifact store name %q", name, storeName)
+		}
+		if mapping.Version < 1 {
+			return fmt.Errorf("shared profile %q artifact store %q version must be positive", name, storeName)
+		}
+		if err := validateSharedPath(name, "artifact_roots."+storeName+".path", mapping.Path); err != nil {
+			return err
+		}
+		if mapping.Path == "" {
+			return fmt.Errorf("shared profile %q artifact store %q path is required", name, storeName)
+		}
+	}
+
+	return nil
+}
+
+func validateSharedEndpoint(name, endpoint string) (*url.URL, error) {
+	parsed, err := url.Parse(endpoint)
+	if err != nil || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" ||
+		parsed.Fragment != "" || (parsed.Path != "" && parsed.Path != "/") {
+		return nil, fmt.Errorf("shared profile %q has invalid endpoint", name)
+	}
+	if parsed.Scheme != httpsScheme && (parsed.Scheme != httpScheme || !loopbackHost(parsed.Hostname())) {
+		return nil, fmt.Errorf("shared profile %q endpoint must use HTTPS or loopback HTTP", name)
+	}
+
+	return parsed, nil
+}
+
+func validateSharedPath(profile, field, value string) error {
+	if value != "" && (!filepath.IsAbs(value) || filepath.Clean(value) != value) {
+		return fmt.Errorf("shared profile %q %s must be a clean absolute path", profile, field)
+	}
+
+	return nil
+}
+
+func loopbackHost(host string) bool {
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	address := net.ParseIP(host)
+
+	return address != nil && address.IsLoopback()
 }
 
 //nolint:cyclop,gocognit // Optional override fields must be validated only when present.

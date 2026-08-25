@@ -8,6 +8,62 @@ semantic-release.
 
 ## [Unreleased]
 
+### Added
+
+- Added the pre-release `jobman/v1alpha1` shared contracts for durable agent
+  acceptance, launch authorization, execution events, desired actions,
+  acknowledgements, and terminal process results.
+- Added the separately packaged `jobman-agent` executable for the first
+  named-host native subprocess slice, including one-time enrollment, mTLS
+  rotation, a host-local SQLite spool, crash-safe isolated runners, private
+  logs, timeouts, cancellation, replay-safe event delivery, and conservative
+  restart reconciliation.
+- Added the pre-release `jobman shared` client lifecycle for named-host native
+  subprocess jobs: strict endpoint/namespace profiles, target inspection,
+  idempotent submission, paginated listing, status/show/wait/cancel commands,
+  versioned JSON, and a private operation journal for safely resuming an
+  uncertain submission.
+- Added target-approved local/NFS shared-log publication with bounded capture,
+  durable agent replay, immutable checksummed chunks, versioned client path
+  mappings, truncation evidence, and `jobman shared logs` read/follow support.
+- Added the bounded on-premises Slurm vertical slice: Linux submit-host agent
+  enrollment and probing, exact-argument `sbatch`/`squeue`/`sacct`/`scancel`
+  integration, portable resources and partitions, private NFS bundles,
+  ambiguity-safe reconciliation, cancellation, and scheduler events.
+- Added target draining/disable transitions, immutable agent capability and
+  liveness observations, rotating sessions, and explicit current, stale,
+  uncertain, or lost execution-observation confidence.
+- Added a hardened per-user systemd agent installer and one-time OpenSSH
+  bootstrap with architecture and checksum verification, standard-input token
+  delivery, idempotent enrollment reuse, and secret-free status output.
+- Added immutable regular-file input staging and output publication through one
+  target-approved local/NFS store, effective mapping-version pinning, bounded
+  checksummed transfer, transactional output metadata, and `jobman shared
+  artifacts` discovery.
+- Added private S3 artifact-store mappings through AWS CLI v2 with standard
+  credential-chain use, expected-owner and checksum validation, bounded
+  materialization, conditional immutable publication, and content-checked
+  replay.
+- Added hardened Docker/Podman subprocess and Apptainer Slurm runtime adapters,
+  plus portable `jobman shared run` container image, pull, and network policy
+  flags.
+- Added portable transactional collections, `jobman shared collection
+  submit|show`, bounded/fail-fast child orchestration, compatible Slurm-array
+  compilation, immutable task manifests, ambiguity-safe one-array submission,
+  and independent task lifecycle, cancellation, logs, artifacts, and outcomes.
+- Added AWS ParallelCluster provider facts and immutable target-generation
+  rollover support while keeping earlier jobs and agents pinned to their
+  original generations.
+- Added immutable portable dependency graphs with cycle rejection, explicit
+  terminal-outcome predicates, cross-target readiness, bounded concurrency,
+  unsatisfied-branch policy, aggregate inspection, and graph cancellation.
+- Added explicit dry-run-capable import of quiescent completed SQLite history
+  into shared PostgreSQL state with new shared IDs and retained source
+  provenance; live work, logs, and artifact bytes are never migrated.
+- Added client support for Control's first production-hardening pass, including
+  namespace quota failures, fair graph/collection dispatch, append-only audit
+  export, bounded metrics, retention, and post-restore assignment holds.
+
 ## [1.6.0] - 2026-08-13
 
 ### Added

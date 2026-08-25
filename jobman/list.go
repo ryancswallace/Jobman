@@ -15,6 +15,8 @@ import (
 	"github.com/ryancswallace/jobman/internal/store"
 )
 
+const listCommandName = "list"
+
 type listCommandOptions struct {
 	jsonOutput      bool
 	all             bool
@@ -33,7 +35,7 @@ type listCommandOptions struct {
 func newListCommand(dependencies dependencies, root *rootOptions) *cobra.Command {
 	options := &listCommandOptions{}
 	command := &cobra.Command{
-		Use:   "list",
+		Use:   listCommandName,
 		Short: "List known jobs",
 		Args:  usageArgs(cobra.NoArgs),
 		RunE: func(command *cobra.Command, _ []string) error {
