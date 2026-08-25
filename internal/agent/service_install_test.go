@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -145,9 +146,10 @@ func TestInstallUserServiceRejectsInvalidHostState(t *testing.T) {
 	if err := os.WriteFile(nonExecutable, []byte("binary"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := InstallUserService(t.Context(), InstallServiceOptions{
+	_, err := InstallUserService(t.Context(), InstallServiceOptions{
 		operatingSystem: "linux", StateDirectory: stateDirectory, AgentBinary: nonExecutable,
-	}); err == nil {
+	})
+	if runtime.GOOS != "windows" && err == nil {
 		t.Fatal("InstallUserService() accepted non-executable binary")
 	}
 }

@@ -6,7 +6,13 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 )
+
+func isOwnerExecutableRegular(information fs.FileInfo) bool {
+	return information.Mode().IsRegular() &&
+		(runtime.GOOS == "windows" || information.Mode().Perm()&0o100 != 0)
+}
 
 func prepareStateDirectory(path string) (string, error) {
 	if !filepath.IsAbs(path) {

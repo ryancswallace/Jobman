@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -766,7 +767,7 @@ func TestSharedOperationJournalValidation(t *testing.T) {
 		t.Fatalf("sharedOperationPath() error = %v", err)
 	}
 	info, err := os.Stat(path)
-	if err != nil || info.Mode().Perm() != 0o600 {
+	if err != nil || runtime.GOOS != "windows" && info.Mode().Perm() != 0o600 {
 		t.Fatalf("operation permissions = %v, %v", info, err)
 	}
 	loaded, err := loadSharedOperation(stateDir, operation.ID)

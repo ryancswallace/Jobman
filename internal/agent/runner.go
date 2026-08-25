@@ -563,13 +563,31 @@ func waitForProcess(
 		case <-timeout:
 			return terminateAndWait(command, identity, waited, "timed_out", "")
 		case <-ticker.C:
-			if _, err := os.Stat(cancelPath); err == nil {
+			canceled, err := cancellationRequested(cancelPath)
+			if err == nil && canceled {
 				return terminateAndWait(command, identity, waited, cancelledOutcome, "")
-			} else if !errors.Is(err, fs.ErrNotExist) {
+			} else if err != nil {
 				return terminateAndWait(command, identity, waited, processOutcomeFailure, "cancel_check_failed")
 			}
 		}
 	}
+}
+
+func cancellationRequested(path string) (bool, error) {
+	if _, err := os.Stat(path); err == nil {
+		return true, nil
+	} else if !errors.Is(err, fs.ErrNotExist) {
+		return false, err
+	}
+	parent, err := os.Stat(filepath.Dir(path))
+	if err != nil {
+		return false, err
+	}
+	if !parent.IsDir() {
+		return false, errors.New("cancel marker parent is not a directory")
+	}
+
+	return false, nil
 }
 
 func processResult(state *os.ProcessState, waitErr error, failureCode string) protocol.ProcessResult {

@@ -76,7 +76,7 @@ func validateSlurmRunner(path string) error {
 	if err != nil {
 		return fmt.Errorf("inspect Slurm runner: %w", err)
 	}
-	if !info.Mode().IsRegular() || info.Mode().Perm()&0o100 == 0 {
+	if !isOwnerExecutableRegular(info) {
 		return errors.New("slurm runner must be an owner-executable regular file")
 	}
 

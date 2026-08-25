@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -27,7 +28,7 @@ func TestSlurmArrayManifestRoundTripAndTaskSelection(t *testing.T) {
 		t.Fatalf("WriteSlurmArrayManifest() error = %v", err)
 	}
 	information, err := os.Stat(filename)
-	if err != nil || information.Mode().Perm() != 0o600 {
+	if err != nil || runtime.GOOS != "windows" && information.Mode().Perm() != 0o600 {
 		t.Fatalf("manifest mode = %v, %v", information.Mode().Perm(), err)
 	}
 	if err = RunSlurmArrayTask(t.Context(), filename, "1", ExecutionOptions{}); err == nil ||
@@ -133,7 +134,8 @@ func TestServiceCompilesAcceptedCollectionToOneSlurmArray(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if information, statErr := os.Stat(filepath.Join(arrayDirectory, slurmArrayManifestFilename)); statErr != nil || information.Mode().Perm() != 0o600 {
+	if information, statErr := os.Stat(filepath.Join(arrayDirectory, slurmArrayManifestFilename)); statErr != nil ||
+		runtime.GOOS != "windows" && information.Mode().Perm() != 0o600 {
 		t.Fatalf("array manifest = %#v, %v", information, statErr)
 	}
 	if err = service.reconcileSlurmArrays(t.Context(), executions); err != nil {
