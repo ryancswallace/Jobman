@@ -33,7 +33,7 @@ type ExecCommandRunner struct{}
 
 // Run executes one engine command with cancellation.
 func (ExecCommandRunner) Run(ctx context.Context, name string, arguments ...string) ([]byte, error) {
-	command := exec.CommandContext(ctx, name, arguments...) // #nosec G204 -- executable is target policy.
+	command := exec.CommandContext(ctx, name, arguments...) // #nosec G204,G702 -- executable is target policy.
 
 	return command.CombinedOutput()
 }
