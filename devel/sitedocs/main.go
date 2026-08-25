@@ -26,6 +26,7 @@ const (
 	referenceParent   = "Reference"
 	operationsParent  = "Operations"
 	projectParent     = "Project"
+	sharedModeSiteURL = "({{ site.baseurl }}/guides/shared-mode/)"
 )
 
 type publishedPage struct {
@@ -64,11 +65,11 @@ var canonicalLinkReplacements = map[string]string{
 	"(CHANGELOG.md)":                     "({{ site.baseurl }}/project/changelog/)",
 	"(LICENSE)":                          "(https://github.com/ryancswallace/jobman/blob/main/LICENSE)",
 	"(docs/CONTAINERS.md)":               "({{ site.baseurl }}/guides/containers/)",
-	"(docs/SHARED_MODE.md)":              "({{ site.baseurl }}/guides/shared-mode/)",
-	"(SHARED_MODE.md)":                   "({{ site.baseurl }}/guides/shared-mode/)",
+	"(docs/SHARED_MODE.md)":              sharedModeSiteURL,
+	"(SHARED_MODE.md)":                   sharedModeSiteURL,
 	"(AGENT.md)":                         "(https://github.com/ryancswallace/jobman/blob/main/docs/AGENT.md)",
 	"(design/DISTRIBUTED_MODE.md)":       "({{ site.baseurl }}/project/distributed-mode/)",
-	"(../SHARED_MODE.md)":                "({{ site.baseurl }}/guides/shared-mode/)",
+	"(../SHARED_MODE.md)":                sharedModeSiteURL,
 	"(SPEC.md)":                          "(https://github.com/ryancswallace/jobman/blob/main/docs/design/SPEC.md)",
 	"(SUPPORT.md)":                       "({{ site.baseurl }}/operations/support/)",
 	"(SPEC.md#17-platform-requirements)": "({{ site.baseurl }}/project/design/#platform-and-process-model)",
