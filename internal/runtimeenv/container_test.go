@@ -77,7 +77,9 @@ func TestApptainerRequiresPreStagedImageAndPolicy(t *testing.T) {
 		t.Fatal(err)
 	}
 	request := CommandRequest{
-		Runtime:    protocol.ContainerRuntime{Image: "/shared/images/tool.sif", PullPolicy: "never", Network: "none"},
+		Runtime: protocol.ContainerRuntime{
+			Image: filepath.Join(t.TempDir(), "tool.sif"), PullPolicy: "never", Network: "none",
+		},
 		Executable: "tool", Workspace: workspace, WorkingDirectory: workspace,
 		BaseEnvironment: []string{"PATH=" + filepath.Dir(binary)},
 	}
@@ -219,14 +221,14 @@ func TestApptainerProbeAndHostPolicy(t *testing.T) {
 	workspace := t.TempDir()
 	command, err := adapter.Command(CommandRequest{
 		Runtime: protocol.ContainerRuntime{
-			Image: "/shared/tool.sif", PullPolicy: "never", Network: "host",
+			Image: filepath.Join(t.TempDir(), "tool.sif"), PullPolicy: "never", Network: "host",
 		},
 		Executable: "tool", Workspace: workspace, WorkingDirectory: workspace,
 	})
 	if err != nil || containsArgumentSequence(command.Args, []string{"--net", "--network", "none"}) {
 		t.Fatalf("Command(host) = %#v, %v", command, err)
 	}
-	if _, err = (ExecCommandRunner{}).Run(t.Context(), "/usr/bin/true"); err != nil {
+	if _, err = (ExecCommandRunner{}).Run(t.Context(), os.Args[0], "-test.run=^$"); err != nil {
 		t.Fatalf("ExecCommandRunner.Run() error = %v", err)
 	}
 }
