@@ -52,6 +52,7 @@ var publishedPages = []publishedPage{
 	{source: "RELEASE.md", destination: "project/releasing.md", title: "Release process", parent: projectParent, permalink: "/project/releasing/", navOrder: 4},
 	{source: "docs/DOGFOOD.md", destination: "project/dogfood.md", title: "Dogfood runbook", parent: projectParent, permalink: "/project/dogfood/", navOrder: 5},
 	{source: "CHANGELOG.md", destination: "project/changelog.md", title: "Changelog", parent: projectParent, permalink: "/project/changelog/", navOrder: 6},
+	{source: "docs/design/DISTRIBUTED_MODE.md", destination: "project/distributed-mode.md", title: "Distributed-mode design", parent: projectParent, permalink: "/project/distributed-mode/", navOrder: 7},
 }
 
 var demoRecordings = []string{"basic.webm", "dependencies.webm", "input.webm", "retries.webm", "timeouts.webm"}
@@ -66,7 +67,9 @@ var canonicalLinkReplacements = map[string]string{
 	"(docs/SHARED_MODE.md)":              "({{ site.baseurl }}/guides/shared-mode/)",
 	"(SHARED_MODE.md)":                   "({{ site.baseurl }}/guides/shared-mode/)",
 	"(AGENT.md)":                         "(https://github.com/ryancswallace/jobman/blob/main/docs/AGENT.md)",
-	"(design/DISTRIBUTED_MODE.md)":       "(https://github.com/ryancswallace/jobman/blob/main/docs/design/DISTRIBUTED_MODE.md)",
+	"(design/DISTRIBUTED_MODE.md)":       "({{ site.baseurl }}/project/distributed-mode/)",
+	"(../SHARED_MODE.md)":                "({{ site.baseurl }}/guides/shared-mode/)",
+	"(SPEC.md)":                          "(https://github.com/ryancswallace/jobman/blob/main/docs/design/SPEC.md)",
 	"(SUPPORT.md)":                       "({{ site.baseurl }}/operations/support/)",
 	"(SPEC.md#17-platform-requirements)": "({{ site.baseurl }}/project/design/#platform-and-process-model)",
 	"(adr/0001-per-job-supervisor.md)":   "({{ site.baseurl }}/project/design/#architectural-decisions)",
