@@ -1,6 +1,6 @@
 # Configuration reference
 
-Status: stable v1 schema
+Status: stable v1 schema with an additive pre-release shared-mode section
 Configuration schema: 1
 
 Jobman uses strict, versioned YAML. Unknown or duplicate keys, invalid scalar
@@ -119,7 +119,8 @@ The top-level registries are:
 - `retention`: completed-log and completed-metadata selection limits;
 - `notifiers`: bounded command, HTTP, or SMTP delivery definitions;
 - `profiles`: explicit ordered overrides, optionally based on a named job spec;
-  and
+- `shared`: pre-release Jobman Control endpoint, namespace, and credential-file
+  profiles, separate from standalone job-spec profiles; and
 - `redaction`: extra sensitive field names and bounded RE2 patterns applied to
   Jobman diagnostics and structured output. Captured target logs remain raw;
   when a user explicitly collects a bounded evidence log tail, the configured
@@ -134,6 +135,49 @@ available.
 
 The packaged [sample configuration] contains commented examples for every
 registry and policy group.
+
+## Shared-mode profiles
+
+The additive `shared` section configures the pre-release `jobman shared`
+client. It does not change where standalone commands store state, and it is
+separate from the stable `profiles` job-spec overlay registry.
+
+```yaml
+shared:
+  current_profile: department
+  profiles:
+    department:
+      endpoint: https://jobman-control.example.edu
+      namespace: research
+      token_file: /home/example/.config/jobman/control-token
+      ca_file: /home/example/.config/jobman/control-ca.pem
+      artifact_roots:
+        department-nfs:
+          version: 1
+          path: /nfs/jobman-artifacts
+```
+
+The endpoint must use HTTPS, except that loopback HTTP without a bearer token
+is allowed for explicit development mode. `token_file` and `ca_file`, when
+present, must be clean absolute paths. Jobman rereads the token for each
+request, requires private token permissions on Unix, and never stores token
+contents in configuration. Trusted project files cannot set `shared`, so
+repository content cannot redirect credentials. There are no environment
+overrides for shared profiles; use the user/system configuration, an explicit
+configuration file, or `jobman shared --profile NAME`.
+
+Each `artifact_roots` entry maps a Control-approved logical store name and
+positive mapping version to the clean absolute mount path visible on this
+client. Configure the same logical identity with platform-specific paths in
+different per-user files. Jobman validates object keys, rejects symlink paths,
+and verifies manifest lengths and checksums before displaying shared logs.
+The same mapping identifies logical input/output artifact objects; workloads
+never contain the physical path. Agent-side writes require atomic
+same-directory hard links. Project configuration cannot add or replace these
+mappings.
+
+See the [shared-mode preview guide](SHARED_MODE.md) for commands, recovery
+behavior, and current limitations.
 
 Retention limits are evaluated when `jobman clean` is invoked; there is no
 resident cleanup service. `clean` first prunes selected completed-run logs and

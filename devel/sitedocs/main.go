@@ -40,6 +40,7 @@ type publishedPage struct {
 
 var publishedPages = []publishedPage{
 	{source: "docs/CONTAINERS.md", destination: "guides/containers.md", title: "Containers", parent: "User guides", permalink: "/guides/containers/", navOrder: 9},
+	{source: "docs/SHARED_MODE.md", destination: "guides/shared-mode.md", title: "Shared-mode preview", parent: "User guides", permalink: "/guides/shared-mode/", navOrder: 10},
 	{source: "docs/CONFIGURATION.md", destination: "reference/configuration.md", title: "Configuration schema", parent: referenceParent, permalink: "/reference/configuration/", navOrder: 2},
 	{source: "docs/COMPATIBILITY.md", destination: "reference/compatibility.md", title: "Compatibility contract", parent: referenceParent, permalink: "/reference/compatibility/", navOrder: 5},
 	{source: "docs/design/PLATFORM_CAPABILITIES.md", destination: "reference/platforms.md", title: "Platform support", parent: referenceParent, permalink: "/reference/platforms/", navOrder: 4},
@@ -62,6 +63,10 @@ var canonicalLinkReplacements = map[string]string{
 	"(CHANGELOG.md)":                     "({{ site.baseurl }}/project/changelog/)",
 	"(LICENSE)":                          "(https://github.com/ryancswallace/jobman/blob/main/LICENSE)",
 	"(docs/CONTAINERS.md)":               "({{ site.baseurl }}/guides/containers/)",
+	"(docs/SHARED_MODE.md)":              "({{ site.baseurl }}/guides/shared-mode/)",
+	"(SHARED_MODE.md)":                   "({{ site.baseurl }}/guides/shared-mode/)",
+	"(AGENT.md)":                         "(https://github.com/ryancswallace/jobman/blob/main/docs/AGENT.md)",
+	"(design/DISTRIBUTED_MODE.md)":       "(https://github.com/ryancswallace/jobman/blob/main/docs/design/DISTRIBUTED_MODE.md)",
 	"(SUPPORT.md)":                       "({{ site.baseurl }}/operations/support/)",
 	"(SPEC.md#17-platform-requirements)": "({{ site.baseurl }}/project/design/#platform-and-process-model)",
 	"(adr/0001-per-job-supervisor.md)":   "({{ site.baseurl }}/project/design/#architectural-decisions)",
