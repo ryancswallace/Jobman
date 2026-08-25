@@ -26,3 +26,8 @@ func requireLocalFilesystem(path string) error {
 
 	return nil
 }
+
+// Windows does not support flushing a directory handle opened through os.Open.
+// File contents are flushed before rename; directory-entry durability therefore
+// follows the guarantees of the underlying Windows filesystem.
+func syncDirectory(string) error { return nil }

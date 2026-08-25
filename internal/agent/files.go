@@ -54,17 +54,8 @@ func writePrivateFile(path string, contents []byte) (resultErr error) {
 	if err = os.Rename(temporaryName, path); err != nil {
 		return fmt.Errorf("replace private file: %w", err)
 	}
-	directoryHandle, err := os.Open(directory)
-	if err != nil {
-		return fmt.Errorf("open private file directory: %w", err)
-	}
-	syncErr := directoryHandle.Sync()
-	closeErr := directoryHandle.Close()
-	if syncErr != nil {
-		return errors.Join(fmt.Errorf("sync private file directory: %w", syncErr), closeErr)
-	}
-	if closeErr != nil {
-		return fmt.Errorf("close private file directory: %w", closeErr)
+	if err = syncDirectory(directory); err != nil {
+		return fmt.Errorf("sync private file directory: %w", err)
 	}
 
 	return nil
@@ -89,15 +80,8 @@ func removePrivateFile(path string) error {
 	if err := os.Remove(path); err != nil {
 		return err
 	}
-	directory, err := os.Open(filepath.Dir(path))
-	if err != nil {
-		return fmt.Errorf("open private file directory: %w", err)
-	}
-	if err = directory.Sync(); err != nil {
-		return errors.Join(fmt.Errorf("sync private file directory: %w", err), directory.Close())
-	}
-	if err = directory.Close(); err != nil {
-		return fmt.Errorf("close private file directory: %w", err)
+	if err := syncDirectory(filepath.Dir(path)); err != nil {
+		return fmt.Errorf("sync private file directory: %w", err)
 	}
 
 	return nil
