@@ -77,6 +77,14 @@ func Alive(identity ProcessIdentity) (bool, error) {
 
 // Terminate sends a graceful or forced request to a verified process tree.
 func Terminate(identity ProcessIdentity, force bool) error {
+	return terminateWithOperation(identity, force, terminateProcess)
+}
+
+func terminateWithOperation(
+	identity ProcessIdentity,
+	force bool,
+	operation func(ProcessIdentity, bool) error,
+) error {
 	alive, err := Alive(identity)
 	if err != nil {
 		return fmt.Errorf("verify process before termination: %w", err)
@@ -85,7 +93,7 @@ func Terminate(identity ProcessIdentity, force bool) error {
 		return nil
 	}
 
-	if err := terminateProcess(identity, force); err != nil {
+	if err := operation(identity, force); err != nil {
 		return fmt.Errorf("terminate process tree %d: %w", identity.PID, err)
 	}
 
@@ -95,6 +103,10 @@ func Terminate(identity ProcessIdentity, force bool) error {
 // Pause suspends a verified target process tree where the platform exposes a
 // safe tree-level primitive.
 func Pause(identity ProcessIdentity) error {
+	return pauseWithOperation(identity, pauseProcess)
+}
+
+func pauseWithOperation(identity ProcessIdentity, operation func(ProcessIdentity) error) error {
 	alive, err := Alive(identity)
 	if err != nil {
 		return fmt.Errorf("verify process before pause: %w", err)
@@ -102,7 +114,7 @@ func Pause(identity ProcessIdentity) error {
 	if !alive {
 		return nil
 	}
-	if err := pauseProcess(identity); err != nil {
+	if err := operation(identity); err != nil {
 		return fmt.Errorf("pause process tree %d: %w", identity.PID, err)
 	}
 
@@ -111,6 +123,10 @@ func Pause(identity ProcessIdentity) error {
 
 // Resume continues a verified target process tree where supported.
 func Resume(identity ProcessIdentity) error {
+	return resumeWithOperation(identity, resumeProcess)
+}
+
+func resumeWithOperation(identity ProcessIdentity, operation func(ProcessIdentity) error) error {
 	alive, err := Alive(identity)
 	if err != nil {
 		return fmt.Errorf("verify process before resume: %w", err)
@@ -118,7 +134,7 @@ func Resume(identity ProcessIdentity) error {
 	if !alive {
 		return nil
 	}
-	if err := resumeProcess(identity); err != nil {
+	if err := operation(identity); err != nil {
 		return fmt.Errorf("resume process tree %d: %w", identity.PID, err)
 	}
 
