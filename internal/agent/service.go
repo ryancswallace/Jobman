@@ -168,6 +168,9 @@ func RunService(ctx context.Context, options ServiceOptions) error {
 	defer client.Close()
 	spool, err := OpenSpool(ctx, stateDirectory)
 	if err != nil {
+		if ctx.Err() != nil {
+			return nil
+		}
 		return fmt.Errorf("run agent service: %w", err)
 	}
 	defer func() { _ = spool.Close() }()
