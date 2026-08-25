@@ -5,6 +5,8 @@ import (
 	"os/exec"
 
 	"github.com/ryancswallace/jobman/internal/app"
+	"github.com/ryancswallace/jobman/internal/config"
+	"github.com/ryancswallace/jobman/internal/controlclient"
 	"github.com/ryancswallace/jobman/internal/supervisor"
 )
 
@@ -19,5 +21,12 @@ func defaultDependencies() dependencies {
 		Environment:  os.Environ,
 		Getenv:       os.Getenv,
 		RunExtension: runExtension,
+		OpenControl: func(profile config.SharedProfile) (sharedControlClient, error) {
+			return controlclient.New(controlclient.Options{
+				Endpoint: profile.Endpoint, Namespace: profile.Namespace,
+				TokenFile: profile.TokenFile, CAFile: profile.CAFile,
+			})
+		},
+		LoadConfig: loadConfiguration,
 	}
 }
