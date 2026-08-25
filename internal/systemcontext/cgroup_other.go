@@ -4,4 +4,4 @@ package systemcontext
 
 import "github.com/ryancswallace/jobman/diagnostic"
 
-func observeLinuxCgroup() (*diagnostic.LinuxCgroupContext, string) { return nil, "" }
+func observeLinuxCgroup() (context *diagnostic.LinuxCgroupContext, source string) { return nil, "" }
