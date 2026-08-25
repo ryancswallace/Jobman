@@ -72,14 +72,15 @@ func TestInstallUserServiceLifecycle(t *testing.T) {
 		t.Fatalf("InstallUserService() = %q, %v calls=%d", unit, err, systemctlCalls)
 	}
 	contents, err := os.ReadFile(unit)
-	if err != nil || !strings.Contains(string(contents), binary) {
+	quotedBinary, quoteErr := quoteSystemdArgument(binary)
+	if err != nil || quoteErr != nil || !strings.Contains(string(contents), "ExecStart="+quotedBinary+" ") {
 		t.Fatalf("installed unit = %q, %v", contents, err)
 	}
 	information, err := os.Stat(unit)
 	if err != nil {
 		t.Fatalf("stat installed unit: %v", err)
 	}
-	if information.Mode().Perm() != 0o600 {
+	if runtime.GOOS != "windows" && information.Mode().Perm() != 0o600 {
 		t.Fatalf("unit mode = %v", information.Mode())
 	}
 
