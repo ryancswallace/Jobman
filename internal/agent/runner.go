@@ -589,7 +589,22 @@ func terminateAndWait(
 		if err := platform.Terminate(identity, true); err != nil {
 			failureCode = "forced_termination_failed"
 		}
-		<-waited
+		forcedTimer := time.NewTimer(defaultTerminationGrace)
+		select {
+		case <-waited:
+			forcedTimer.Stop()
+		case <-forcedTimer.C:
+			if err := command.Process.Kill(); err != nil && !errors.Is(err, os.ErrProcessDone) {
+				failureCode = "forced_termination_failed"
+			}
+			finalTimer := time.NewTimer(defaultTerminationGrace)
+			select {
+			case <-waited:
+				finalTimer.Stop()
+			case <-finalTimer.C:
+				failureCode = "process_wait_failed"
+			}
+		}
 	}
 	result := processResult(command.ProcessState, nil, failureCode)
 	result.Outcome = outcome
