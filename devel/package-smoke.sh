@@ -28,6 +28,7 @@ docker run --rm --platform linux/amd64 -v "${dist_absolute}:/dist:ro" "${debian}
     apt-get update >/dev/null
     apt-get install -y --no-install-recommends "$1" >/dev/null
     jobman --version | grep -F "jobman $2"
+    jobman-agent version | grep -F "jobman-agent $2"
     jobman config validate /etc/jobman/jobman.yml
     test -s /usr/share/bash-completion/completions/jobman
     test -s /usr/share/zsh/vendor-completions/_jobman
@@ -38,6 +39,7 @@ docker run --rm --platform linux/amd64 -v "${dist_absolute}:/dist:ro" "${fedora}
   sh -eu -c '
     dnf install -y "$1" >/dev/null
     jobman --version | grep -F "jobman $2"
+    jobman-agent version | grep -F "jobman-agent $2"
     jobman config validate /etc/jobman/jobman.yml
     test -s /usr/share/bash-completion/completions/jobman
     test -s /usr/share/zsh/site-functions/_jobman
@@ -48,6 +50,7 @@ docker run --rm --platform linux/amd64 -v "${dist_absolute}:/dist:ro" "${alpine}
   sh -eu -c '
     apk add --no-cache --allow-untrusted "$1" >/dev/null
     jobman --version | grep -F "jobman $2"
+    jobman-agent version | grep -F "jobman-agent $2"
     jobman config validate /etc/jobman/jobman.yml
     test -s /usr/share/bash-completion/completions/jobman
     test -s /usr/share/zsh/site-functions/_jobman
