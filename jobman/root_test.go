@@ -18,6 +18,7 @@ import (
 	"github.com/ryancswallace/jobman/diagnostic"
 	"github.com/ryancswallace/jobman/internal/app"
 	"github.com/ryancswallace/jobman/internal/config"
+	"github.com/ryancswallace/jobman/internal/controlclient"
 	"github.com/ryancswallace/jobman/internal/liveinput"
 	"github.com/ryancswallace/jobman/internal/model"
 	"github.com/ryancswallace/jobman/internal/store"
@@ -954,6 +955,11 @@ func TestExitCode(t *testing.T) {
 		{err: app.ErrAmbiguous, want: 4},
 		{err: app.ErrConflict, want: 5},
 		{err: fmt.Errorf("partial live input: %w", io.ErrShortWrite), want: 6},
+		{err: &controlclient.APIError{StatusCode: 400}, want: 2},
+		{err: &controlclient.APIError{StatusCode: 422}, want: 2},
+		{err: &controlclient.APIError{StatusCode: 404}, want: 3},
+		{err: &controlclient.APIError{StatusCode: 409}, want: 5},
+		{err: &controlclient.APIError{StatusCode: 503}, want: 1},
 		{err: errors.New("boom"), want: 1},
 	}
 	for _, test := range tests {
