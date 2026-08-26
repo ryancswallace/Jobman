@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -341,7 +342,7 @@ func TestSlurmFilesystemConfiguration(t *testing.T) {
 	if err = os.WriteFile(runner, []byte("binary"), 0o600); err != nil {
 		t.Fatalf("write runner: %v", err)
 	}
-	if err = validateSlurmRunner(runner); err == nil {
+	if err = validateSlurmRunner(runner); runtime.GOOS != "windows" && err == nil {
 		t.Fatal("validateSlurmRunner() accepted a non-executable file")
 	}
 	if err = os.Chmod(runner, 0o700); err != nil { // #nosec G302 -- this fixture must be owner-executable.

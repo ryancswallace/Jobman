@@ -38,7 +38,7 @@ type ExecCommandRunner struct{}
 
 // Run executes one command with context cancellation and bounded arguments.
 func (ExecCommandRunner) Run(ctx context.Context, name string, arguments ...string) ([]byte, error) {
-	command := exec.CommandContext(ctx, name, arguments...) // #nosec G204 -- executable is administrator configuration.
+	command := exec.CommandContext(ctx, name, arguments...) // #nosec G204,G702 -- executable is administrator configuration.
 
 	return command.CombinedOutput()
 }

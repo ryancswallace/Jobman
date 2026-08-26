@@ -1,6 +1,7 @@
 package config
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -8,6 +9,7 @@ import (
 
 func TestConfigurationValidationFailures(t *testing.T) {
 	t.Parallel()
+	tokenPath := filepath.Join(t.TempDir(), "token")
 
 	tests := map[string]struct {
 		mutate func(*Config)
@@ -147,7 +149,7 @@ func TestConfigurationValidationFailures(t *testing.T) {
 		"shared token over HTTP": {
 			mutate: func(configuration *Config) {
 				configuration.Shared.Profiles["department"] = SharedProfile{
-					Endpoint: "http://127.0.0.1:8080", Namespace: "research", TokenFile: "/token",
+					Endpoint: "http://127.0.0.1:8080", Namespace: "research", TokenFile: tokenPath,
 				}
 			},
 			want: "cannot send a token over HTTP",

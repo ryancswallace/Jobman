@@ -649,7 +649,7 @@ func validateRuntime(value Runtime) error {
 }
 
 func validateArtifacts(value Artifacts) error {
-	if len(value.Inputs)+len(value.Outputs) > maximumArtifacts {
+	if len(value.Inputs) > maximumArtifacts || len(value.Outputs) > maximumArtifacts-len(value.Inputs) {
 		return errors.New("validate workload: too many artifacts")
 	}
 	seen := make(map[string]struct{}, len(value.Inputs)+len(value.Outputs))

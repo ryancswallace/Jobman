@@ -206,17 +206,8 @@ func writeSharedOperation(stateDir string, operation sharedOperation) error {
 		_ = os.Remove(temporary)
 		return fmt.Errorf("commit shared submission operation: %w", err)
 	}
-	directoryHandle, err := os.Open(directory)
-	if err != nil {
-		return fmt.Errorf("open shared submission operation directory: %w", err)
-	}
-	syncErr := directoryHandle.Sync()
-	closeErr := directoryHandle.Close()
-	if syncErr != nil {
-		return errors.Join(fmt.Errorf("sync shared submission operation directory: %w", syncErr), closeErr)
-	}
-	if closeErr != nil {
-		return fmt.Errorf("close shared submission operation directory: %w", closeErr)
+	if err = syncSharedOperationDirectory(directory); err != nil {
+		return fmt.Errorf("sync shared submission operation directory: %w", err)
 	}
 
 	return nil

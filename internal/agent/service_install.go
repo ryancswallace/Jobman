@@ -87,7 +87,7 @@ func InstallUserService(ctx context.Context, options InstallServiceOptions) (str
 	if err != nil {
 		return "", fmt.Errorf("install agent service: inspect agent binary: %w", err)
 	}
-	if !information.Mode().IsRegular() || information.Mode().Perm()&0o100 == 0 {
+	if !isOwnerExecutableRegular(information) {
 		return "", errors.New("install agent service: agent binary must be an owner-executable regular file")
 	}
 	arguments, err := serviceRunArguments(options, stateDirectory)

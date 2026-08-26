@@ -299,7 +299,7 @@ func TestS3StoreExecutableValidationAndRunner(t *testing.T) {
 	}); err == nil {
 		t.Fatal("NewS3Store() accepted a NUL executable")
 	}
-	if _, err := (ExecCommandRunner{}).Run(t.Context(), "/usr/bin/true"); err != nil {
+	if _, err := (ExecCommandRunner{}).Run(t.Context(), os.Args[0], "-test.run=^$"); err != nil {
 		t.Fatalf("ExecCommandRunner.Run() error = %v", err)
 	}
 }
