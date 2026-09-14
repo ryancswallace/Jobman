@@ -731,9 +731,9 @@ Module: <https://pkg.go.dev/go.yaml.in/yaml/v3@v3.0.5>
     See the License for the specific language governing permissions and
     limitations under the License.
 
-## golang.org/x/sys v0.47.0
+## golang.org/x/sys v0.48.0
 
-Module: <https://pkg.go.dev/golang.org/x/sys@v0.47.0>
+Module: <https://pkg.go.dev/golang.org/x/sys@v0.48.0>
 
 ### LICENSE
 
@@ -790,9 +790,9 @@ Module: <https://pkg.go.dev/golang.org/x/sys@v0.47.0>
     rights granted to you under this License for this implementation of Go
     shall terminate as of the date such litigation is filed.
 
-## modernc.org/libc v1.74.4
+## modernc.org/libc v1.75.6
 
-Module: <https://pkg.go.dev/modernc.org/libc@v1.74.4>
+Module: <https://pkg.go.dev/modernc.org/libc@v1.75.6>
 
 ### LICENSE
 
@@ -1166,9 +1166,9 @@ Module: <https://pkg.go.dev/modernc.org/mathutil@v1.7.1>
     (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
     OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-## modernc.org/memory v1.11.0
+## modernc.org/memory v1.12.1
 
-Module: <https://pkg.go.dev/modernc.org/memory@v1.11.0>
+Module: <https://pkg.go.dev/modernc.org/memory@v1.12.1>
 
 ### LICENSE
 
@@ -1262,9 +1262,9 @@ Module: <https://pkg.go.dev/modernc.org/memory@v1.11.0>
     SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-## modernc.org/sqlite v1.57.0
+## modernc.org/sqlite v1.58.0
 
-Module: <https://pkg.go.dev/modernc.org/sqlite@v1.57.0>
+Module: <https://pkg.go.dev/modernc.org/sqlite@v1.58.0>
 
 ### LICENSE
 
