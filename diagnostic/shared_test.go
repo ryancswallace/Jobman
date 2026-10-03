@@ -544,3 +544,12 @@ func TestSharedCancellationAfterMetadataAndNoLogReferences(t *testing.T) {
 		t.Fatal("missing log availability is not explicit")
 	}
 }
+
+func TestSharedRejectsAmbiguousCitationIdentity(t *testing.T) {
+	snapshot := sharedFixtureSnapshot(t)
+	snapshot.Items[0].ID = snapshot.Logs[0].ID
+	slices.SortFunc(snapshot.Items, func(left, right Item) int { return strings.Compare(left.ID, right.ID) })
+	if _, err := sharedFixtureCollector(snapshot).Collect(t.Context(), sharedFixtureRequest()); err == nil {
+		t.Fatal("shared metadata accepted a fact ID also used by a manifest artifact")
+	}
+}

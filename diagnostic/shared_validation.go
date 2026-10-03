@@ -140,6 +140,19 @@ func validateSharedEvidenceIdentity(value Evidence) error {
 	if len(value.Items) > SharedMaximumItems || value.Limits.EncodedBytes >= SharedMaximumBytes {
 		return errSharedEvidenceBounds
 	}
+	return validateSharedCitationIDs(value.Items, value.Shared.Logs)
+}
+
+func validateSharedCitationIDs(items []Item, logs []SharedLogReference) error {
+	ids := make(map[string]bool, len(items))
+	for _, item := range items {
+		ids[item.ID] = true
+	}
+	for _, ref := range logs {
+		if ids[ref.ID] {
+			return errors.New("validate evidence: shared fact and log reference reuse a citation ID")
+		}
+	}
 	return nil
 }
 
