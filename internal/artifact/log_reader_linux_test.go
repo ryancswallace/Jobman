@@ -4,10 +4,13 @@ package artifact
 
 import (
 	"errors"
+	"io"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"testing/iotest"
 
 	"golang.org/x/sys/unix"
 )
@@ -229,4 +232,77 @@ func TestPrivateStoreStillCreatesPrivateFilesWithoutPolicy(t *testing.T) {
 	}
 	assertReaderMode(t, filepath.Join(root, readerTestKey), 0o600)
 	assertReaderMode(t, filepath.Dir(filepath.Join(root, readerTestKey)), 0o700)
+}
+
+type readerMutation struct {
+	change func()
+	source io.Reader
+	done   bool
+}
+
+func (reader *readerMutation) Read(data []byte) (int, error) {
+	if !reader.done {
+		reader.done = true
+		reader.change()
+	}
+	return reader.source.Read(data)
+}
+
+func TestPolicyProducerRejectsInterruptedOrChangedSourceWithoutPublishing(t *testing.T) {
+	for _, kind := range []string{"short", "long", "read error", "file permission removed", "parent permission removed"} {
+		t.Run(kind, func(t *testing.T) {
+			root := readerTestRoot(t)
+			store := readerTestStore(t, root)
+			var source io.Reader = strings.NewReader("log")
+			switch kind {
+			case "short":
+				source = strings.NewReader("lo")
+			case "long":
+				source = strings.NewReader("logs")
+			case "read error":
+				source = iotest.ErrReader(errors.New("synthetic source interrupted"))
+			default:
+				source = &readerMutation{source: source, change: func() {
+					parent := filepath.Dir(filepath.Join(root, readerTestKey))
+					path := parent
+					if kind == "file permission removed" {
+						entries, err := os.ReadDir(parent)
+						if err != nil || len(entries) != 1 {
+							t.Fatalf("expected one staging object: %v", err)
+						}
+						path = filepath.Join(parent, entries[0].Name())
+					}
+					if err := os.Chmod(path, 0o700); err != nil { //nolint:gosec // Deliberately remove the inherited reader grant during a synthetic write.
+						t.Fatal(err)
+					}
+				}}
+			}
+			if _, err := store.putReaderObject(readerTestKey, source, 3, 3); err == nil {
+				t.Fatal("published interrupted or no-longer-authorized source")
+			}
+			if _, err := os.Lstat(filepath.Join(root, readerTestKey)); !errors.Is(err, os.ErrNotExist) {
+				t.Fatal("failed publication left a visible final object")
+			}
+			entries, err := os.ReadDir(filepath.Dir(filepath.Join(root, readerTestKey)))
+			if err != nil || len(entries) != 0 {
+				t.Fatalf("failed publication leaked staging data: %v", err)
+			}
+		})
+	}
+}
+
+func TestPolicyProducerRejectsUnboundedSourceAndPath(t *testing.T) {
+	root := readerTestRoot(t)
+	store := readerTestStore(t, root)
+	for _, limits := range [][2]int64{{-1, 0}, {2, 1}, {math.MaxInt64, math.MaxInt64}, {maximumSharedLogChunkBytes + 1, maximumSharedLogChunkBytes + 1}} {
+		if _, err := store.putReaderObject(readerTestKey, strings.NewReader(""), limits[0], limits[1]); err == nil {
+			t.Fatal("accepted an invalid or excessive publication bound")
+		}
+	}
+	if _, err := store.putReaderObject(strings.Repeat("nested/", 33)+"object", strings.NewReader(""), 0, 0); err == nil {
+		t.Fatal("accepted an excessive path depth")
+	}
+	if _, err := os.Stat(filepath.Join(root, readerTestKey)); !errors.Is(err, os.ErrNotExist) {
+		t.Fatal("invalid publication left a final object")
+	}
 }
