@@ -205,6 +205,11 @@ remotely readable merely because its metadata is in Control. The filesystem
 must support atomic same-directory hard links so the agent can publish a fully
 synchronized chunk without exposing a partial object at its final key.
 
+Linux filesystem stores can opt into a narrowly scoped
+[designated log-reader ACL policy](LOG_READER_ACL.md) for a Dashboard broker.
+Private defaults remain unchanged; existing paths require operator ACL
+provisioning before enabling the policy.
+
 The state directory must be absolute, private, and host-local. Linux rejects
 NFS, macOS requires a filesystem marked local, and Windows rejects remote or
 unverifiable drives. This SQLite spool is a target-side recovery journal, not
