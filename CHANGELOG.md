@@ -8,6 +8,16 @@ semantic-release.
 
 ## [Unreleased]
 
+### Added
+
+- Added a public, model-independent shared-job snapshot and evidence collector
+  for authorized Control metadata and bounded log-tail readers. Evidence schema
+  2 seals deployment, Control instance, namespace, real job/run/execution and
+  manifest identities without fabricating local-store state. Default collection
+  excludes commands, paths, environment information and log content; opted-in
+  tails require configured value redaction. Schema-1 decoding, collection and
+  published fixture identities remain compatible.
+
 ## [1.8.0] - 2026-08-27
 
 ### Changed

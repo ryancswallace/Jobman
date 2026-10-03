@@ -1,7 +1,11 @@
-# Diagnostic evidence schema 1
+# Diagnostic evidence
 
 Status: schema 1 released in v1.4.0; additive system-context collection is
 implemented on `main`
+
+Shared Control evidence uses the additive, independently versioned
+[schema-2 contract and public collector](SHARED_DIAGNOSTIC_EVIDENCE.md).
+The local CLI continues producing schema 1 with unchanged fixture identities.
 
 Jobman can export a bounded, immutable snapshot of factual job observations
 without interpreting target output or contacting a model:
