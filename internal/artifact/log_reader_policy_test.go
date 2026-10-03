@@ -29,6 +29,8 @@ func TestLogReaderPolicyRequiresExplicitBoundIdentity(t *testing.T) {
 		strings.Replace(readerTestPolicy, `"schema_version":1`, `"schema_version":2`, 1),
 		strings.Replace(readerTestPolicy, `"store_name":"logs"`, `"store_name":"foreign"`, 1),
 		strings.Replace(readerTestPolicy, `"store_version":1`, `"store_version":2`, 1),
+		strings.Replace(readerTestPolicy, `"schema_version"`, `"SCHEMA_VERSION"`, 1),
+		strings.Replace(readerTestPolicy, `"reader_uid"`, `"READER_UID"`, 1),
 	} {
 		if _, err := decodeLogReaderPolicy([]byte(data), "logs", 1); err == nil {
 			t.Errorf("accepted invalid policy %q", data)

@@ -16,6 +16,7 @@
         "diagnostic/testdata/*.json",
         "docs/screencaps/**",
         "go.sum",
+        "internal/artifact/testdata/log-reader-nfs4.json",
         "THIRD_PARTY_NOTICES.md"
     ],
     "ignoreRegExpList": [
@@ -119,6 +120,7 @@
         "fatcontext",
         "faultinject",
         "failureclass",
+        "Fgetxattr",
         "fieldalignment",
         "FILETIME",
         "fromjson",
@@ -201,6 +203,7 @@
         "libxcomposite",
         "libxdamage",
         "LICEN",
+        "Linkat",
         "livecheck",
         "liveinput",
         "locafero",
@@ -224,6 +227,7 @@
         "metacharacters",
         "mikestead",
         "mitchellh",
+        "Mkdirat",
         "mktemp",
         "moby",
         "modernc",
@@ -235,6 +239,7 @@
         "ncruces",
         "nestif",
         "nfpms",
+        "NFSACL",
         "nilerr",
         "nilnesserr",
         "nilnil",
@@ -274,6 +279,7 @@
         "pgid",
         "pids",
         "pipefail",
+        "POSIXACL",
         "prealloc",
         "predeclared",
         "premparihar",
@@ -289,6 +295,7 @@
         "Refspec",
         "releasemetadata",
         "releaserc",
+        "Removexattr",
         "remyoudompheng",
         "reindexing",
         "reparse",
@@ -316,6 +323,7 @@
         "scancel",
         "seccomp",
         "setsid",
+        "Setxattr",
         "shellcheck",
         "SIGCONT",
         "SIGSTOP",
@@ -400,6 +408,7 @@
         "Workstream",
         "worktree",
         "xattr",
+        "xattrs",
         "zeroblob"
     ]
 }

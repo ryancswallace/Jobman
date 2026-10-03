@@ -58,6 +58,11 @@ func validateLogPolicyFields(data []byte) (int, error) {
 		if tokenErr != nil || !ok || fields[field] != nil {
 			return 0, errors.New("log reader policy contains invalid or duplicate fields")
 		}
+		switch field {
+		case "schema_version", "store_name", "store_version", "reader_uid":
+		default:
+			return 0, errors.New("log reader policy contains an unknown field")
+		}
 		var raw json.RawMessage
 		if decodeErr := decoder.Decode(&raw); decodeErr != nil {
 			return 0, errors.New("log reader policy contains invalid JSON")
