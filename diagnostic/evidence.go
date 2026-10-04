@@ -14,8 +14,10 @@ import (
 const (
 	// Kind identifies the diagnostic evidence document type.
 	Kind = "jobman.diagnostic_evidence"
-	// SchemaVersion is the newest evidence schema understood by this package.
+	// SchemaVersion is the stable local-store schema and the default for Seal.
 	SchemaVersion = 1
+	// SharedSchemaVersion identifies evidence collected from Jobman Control.
+	SharedSchemaVersion = 2
 	// CollectorVersion identifies the schema-1 core evidence collector semantics.
 	CollectorVersion = "1.0.0"
 )
@@ -35,13 +37,14 @@ type Evidence struct {
 	Omissions        []Omission        `json:"omissions"`
 	RedactionNotices []RedactionNotice `json:"redaction_notices"`
 	Limits           Limits            `json:"limits"`
+	Shared           *SharedProvenance `json:"shared,omitempty"`
 }
 
 // Source identifies the Jobman build and platform that collected evidence.
 type Source struct {
 	JobmanVersion      string   `json:"jobman_version"`
 	CollectorVersion   string   `json:"collector_version"`
-	StoreSchemaVersion int      `json:"store_schema_version"`
+	StoreSchemaVersion int      `json:"store_schema_version,omitempty"`
 	Platform           string   `json:"platform"`
 	Capabilities       []string `json:"capabilities"`
 }
