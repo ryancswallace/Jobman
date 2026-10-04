@@ -8,6 +8,13 @@ semantic-release.
 
 ## [Unreleased]
 
+### Fixed
+
+- Reconcile finished Slurm jobs through verified accounting when the live queue
+  rejects their IDs, preserving native array-task identities. An unavailable
+  task observation no longer blocks sibling results, logs, or cancellation
+  polling. Missing accounting alone never creates a terminal outcome.
+
 ### Added
 
 - Added an opt-in Linux filesystem log-reader policy for exact named-reader
