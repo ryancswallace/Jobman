@@ -117,6 +117,19 @@ Jobman reports the Slurm job ID and normalized scheduler state, cluster, and
 reason in `shared show` and JSON status output. Queueing does not become the
 portable `running` phase until Slurm reports `RUNNING`.
 
+When a job leaves the live queue, the agent checks accounting even if `squeue`
+rejects the old ID. Accounting must identify the exact job or native array task;
+an allocation's numeric `JobIDRaw` is not interchangeable with `ARRAY_JOB_ID_TASK_INDEX`.
+The runner's durable workload result remains authoritative when the batch
+wrapper itself exits successfully.
+
+A cancellation acknowledgement records the request, not proof of terminal
+execution. Some queued array tasks leave no individual accounting allocation.
+Without a positive terminal scheduler or runner record, the agent preserves the
+last observation and reports reconciliation failure. It does not infer a
+cancelled outcome from absence. Other executions can still publish their
+verified outcomes and logs, and the agent continues polling desired actions.
+
 Use a target-approved container runtime by supplying portable image and policy
 intent. Subprocess targets support Docker or Podman; Slurm targets support
 Apptainer with an administrator-staged absolute `.sif` path and `never` pull
