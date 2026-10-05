@@ -19,6 +19,11 @@ semantic-release.
   rejects their IDs, preserving native array-task identities. An unavailable
   task observation no longer blocks sibling results, logs, or cancellation
   polling. Missing accounting alone never creates a terminal outcome.
+- Safely stop log capture when supervisor control fails before a target exits,
+  preventing capture-channel closure and process-state observation races without
+  overriding the configured termination escalation policy.
+- Allow SQLite sidecars to disappear during access validation when a concurrent
+  connection closes, while retaining access checks for any replacement file.
 
 ### Added
 

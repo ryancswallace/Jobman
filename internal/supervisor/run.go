@@ -503,15 +503,24 @@ func waitAndFinalizeRun(
 		pausedBaseline,
 	)
 	defer releaseOperation()
+	if controlErr != nil {
+		// A failed control observation can return before the target exits. Stop
+		// reading its output and join every capture sender before closing their
+		// channel or storage. The wait goroutine still owns reaping the process;
+		// do not read ProcessState until it has reported completion, and do not
+		// force termination when the configured stop policy forbids escalation.
+		pipeErr := target.closeOutputPipes()
+		captureGroup.Wait()
+		close(captureErrors)
+		captureErr := collectCaptureErrors(captureErrors)
+
+		return false, errors.Join(controlErr, pipeErr, captureErr, capture.Close())
+	}
 	close(captureErrors)
 	captureErr := collectCaptureErrors(captureErrors)
 	closeErr := capture.Close()
 	logs = completedLogMetadata(logs, captureErr, closeErr)
 	resources := resourceusage.Observe(target.command.ProcessState)
-	if waitErr == nil && controlErr != nil {
-		return false, errors.Join(controlErr, captureErr, closeErr)
-	}
-
 	latest, getErr := database.GetJob(operationCtx, jobID)
 	if getErr != nil {
 		return false, errors.Join(waitErr, captureErr, closeErr, getErr)
