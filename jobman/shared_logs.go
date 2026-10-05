@@ -245,7 +245,7 @@ func readSharedLogChunks(
 	mappings map[string]config.SharedArtifactRoot,
 	chunks []selectedLogChunk,
 ) ([]byte, error) {
-	stores := make(map[string]*artifact.FilesystemStore)
+	stores := make(map[string]*artifact.FilesystemReader)
 	var result []byte
 	for _, selected := range chunks {
 		mapping, found := mappings[selected.chunk.StoreName]
@@ -259,7 +259,7 @@ func readSharedLogChunks(
 		store := stores[key]
 		if store == nil {
 			var err error
-			store, err = artifact.NewFilesystemStore(
+			store, err = artifact.NewFilesystemReader(
 				selected.chunk.StoreName, selected.chunk.StoreVersion, mapping.Path,
 			)
 			if err != nil {

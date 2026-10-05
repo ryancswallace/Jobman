@@ -53,8 +53,8 @@ func readLogReaderPolicyAt(parent int, name string, version int64) (*logReaderPo
 		return nil, statErr
 	}
 	if info.Mode&unix.S_IFMT != unix.S_IFREG || info.Mode&0o7777 != 0o600 ||
-		(info.Uid != root.Uid && info.Uid != 0) || info.Size < 1 || info.Size > maximumLogReaderPolicyBytes {
-		return nil, errors.New("log reader policy must be a private bounded regular file owned by the store owner or root")
+		info.Uid != root.Uid || info.Size < 1 || info.Size > maximumLogReaderPolicyBytes {
+		return nil, errors.New("log reader policy must be a private bounded regular file owned by the store owner")
 	}
 	data, err := io.ReadAll(io.LimitReader(file, maximumLogReaderPolicyBytes+1))
 	if err != nil {
@@ -141,7 +141,7 @@ func (path *readerObjectPath) close() error {
 	return result
 }
 
-func (store *FilesystemStore) openReaderObjectPath(key string) (result *readerObjectPath, resultErr error) {
+func (store *FilesystemStore) openReaderObjectPath(key string, logChunk bool) (result *readerObjectPath, resultErr error) {
 	parts := strings.Split(key, "/")
 	if len(parts) < 1 || len(parts) > 32 {
 		return nil, errors.New("log reader object path exceeds depth limit")
@@ -150,7 +150,7 @@ func (store *FilesystemStore) openReaderObjectPath(key string) (result *readerOb
 	if err != nil {
 		return nil, fmt.Errorf("open log reader root: %w", err)
 	}
-	path := &readerObjectPath{directories: []int{root}, leaf: parts[len(parts)-1], shared: isSharedLogKey(key), policy: store.logReader, sharedDepth: sharedLogPrefix(parts)}
+	path := &readerObjectPath{directories: []int{root}, leaf: parts[len(parts)-1], shared: logChunk && isSharedLogKey(key), policy: store.logReader, sharedDepth: sharedLogPrefix(parts)}
 	defer func() {
 		if resultErr != nil {
 			resultErr = errors.Join(resultErr, path.close())
@@ -200,11 +200,11 @@ func openReaderDirectory(parent int, component string, mode uint32) (int, error)
 // Policy-enabled publication uses descriptor-relative opens and hard links.
 // Every inherited ACL is validated before any payload is written. No ACL or
 // existing mode is changed; preexisting masked paths require operator repair.
-func (store *FilesystemStore) putReaderObject(key string, source io.Reader, expected, maximum int64) (result Object, resultErr error) {
+func (store *FilesystemStore) putReaderObject(key string, source io.Reader, expected, maximum int64, logChunk bool) (result Object, resultErr error) {
 	if expected < 0 || expected > maximum || expected == math.MaxInt64 {
 		return Object{}, errors.New("invalid policy-protected artifact size limit")
 	}
-	path, err := store.openReaderObjectPath(key)
+	path, err := store.openReaderObjectPath(key, logChunk)
 	if err != nil {
 		return Object{}, err
 	}
@@ -213,24 +213,31 @@ func (store *FilesystemStore) putReaderObject(key string, source io.Reader, expe
 		return Object{}, errors.New("shared log chunk exceeds size limit")
 	}
 	parent := path.directories[len(path.directories)-1]
-	file, temporary, err := createReaderObject(parent, path.shared)
+	staging, stagingName, err := createReaderStaging(parent, path.policy)
+	if err != nil {
+		return Object{}, err
+	}
+	defer func() {
+		resultErr = errors.Join(resultErr, unix.Close(staging), unix.Unlinkat(parent, stagingName, unix.AT_REMOVEDIR))
+	}()
+	file, temporary, err := createReaderObject(staging, path.shared)
 	if err != nil {
 		return Object{}, err
 	}
 	defer func() {
 		resultErr = errors.Join(resultErr, file.Close())
 		if temporary != "" {
-			resultErr = errors.Join(resultErr, unix.Unlinkat(parent, temporary, 0))
+			resultErr = errors.Join(resultErr, unix.Unlinkat(staging, temporary, 0))
 		}
 	}()
 	digest, err := writeReaderObject(path, file, source, expected)
 	if err != nil {
 		return Object{}, err
 	}
-	if err := publishReaderObject(path, file, temporary, expected, digest); err != nil {
+	if err := publishReaderObject(path, staging, file, temporary, expected, digest); err != nil {
 		return Object{}, err
 	}
-	if err := unix.Unlinkat(parent, temporary, 0); err != nil {
+	if err := unix.Unlinkat(staging, temporary, 0); err != nil {
 		return Object{}, err
 	}
 	temporary = ""
@@ -255,7 +262,10 @@ func writeReaderObject(path *readerObjectPath, file *os.File, source io.Reader, 
 	return digestPrefix + hex.EncodeToString(hash.Sum(nil)), nil
 }
 
-func publishReaderObject(path *readerObjectPath, file *os.File, temporary string, expected int64, digest string) error {
+func publishReaderObject(path *readerObjectPath, staging int, file *os.File, temporary string, expected int64, digest string) error {
+	if err := validateLogReaderNode(staging, path.policy, true, false); err != nil {
+		return err
+	}
 	if err := validateLogReaderNode(int(file.Fd()), path.policy, false, path.shared); err != nil {
 		return err
 	}
@@ -265,7 +275,7 @@ func publishReaderObject(path *readerObjectPath, file *os.File, temporary string
 		}
 	}
 	parent := path.directories[len(path.directories)-1]
-	if err := unix.Linkat(parent, temporary, parent, path.leaf, 0); errors.Is(err, unix.EEXIST) {
+	if err := unix.Linkat(staging, temporary, parent, path.leaf, 0); errors.Is(err, unix.EEXIST) {
 		if replayErr := verifyReaderReplay(parent, path, expected, digest); replayErr != nil {
 			return replayErr
 		}
@@ -276,6 +286,35 @@ func publishReaderObject(path *readerObjectPath, file *os.File, temporary string
 		return fmt.Errorf("sync policy-protected artifact directory: %w", err)
 	}
 	return nil
+}
+
+// A fresh private directory inherits the operator's default ACL while its zero
+// access mask prevents readers from reaching any incomplete or aborted inode.
+func createReaderStaging(parent int, policy *logReaderPolicy) (descriptor int, directoryName string, resultErr error) {
+	for range 3 {
+		var random [16]byte
+		if _, err := rand.Read(random[:]); err != nil {
+			return -1, "", err
+		}
+		name := ".jobman-staging-" + hex.EncodeToString(random[:])
+		if err := unix.Mkdirat(parent, name, 0o700); errors.Is(err, unix.EEXIST) {
+			continue
+		} else if err != nil {
+			return -1, "", fmt.Errorf("create private publication directory: %w", err)
+		}
+		fd, err := unix.Openat(parent, name, logDirectoryFlags, 0)
+		if err == nil {
+			err = validateLogReaderNode(fd, policy, true, false)
+		}
+		if err != nil {
+			if fd >= 0 {
+				err = errors.Join(err, unix.Close(fd))
+			}
+			return -1, "", errors.Join(err, unix.Unlinkat(parent, name, unix.AT_REMOVEDIR))
+		}
+		return fd, name, nil
+	}
+	return -1, "", errors.New("cannot allocate unique private publication directory")
 }
 
 func createReaderObject(parent int, shared bool) (*os.File, string, error) {

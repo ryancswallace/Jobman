@@ -55,3 +55,23 @@ func TestFilesystemStoreInterfaceOperationsAndCancellation(t *testing.T) {
 		}
 	}
 }
+
+func TestPutLogPreservesExistingStoreImplementationsAndCancellation(t *testing.T) {
+	store, err := NewFilesystemStore("logs", 1, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	// An embedded Store intentionally exposes only the existing interface,
+	// matching third-party implementations that do not provide log ACLs.
+	legacy := struct{ Store }{store}
+	for _, implementation := range []Store{store, legacy} {
+		if digest, err := PutLog(t.Context(), implementation, readerTestKey, []byte("log")); err != nil || digest != Digest([]byte("log")) {
+			t.Fatalf("publish log: %s %v", digest, err)
+		}
+		ctx, cancel := context.WithCancel(t.Context())
+		cancel()
+		if _, err := PutLog(ctx, implementation, readerTestKey, []byte("log")); !errors.Is(err, context.Canceled) {
+			t.Fatalf("canceled publication: %v", err)
+		}
+	}
+}

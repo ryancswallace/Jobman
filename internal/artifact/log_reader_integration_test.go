@@ -38,10 +38,10 @@ func TestLogReaderProvisionedFilesystem(t *testing.T) {
 	if _, err := store.PutImmutable(private, []byte("private synthetic artifact\n")); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := store.PutImmutable(readerTestKey, []byte("shared synthetic log\n")); err != nil {
+	if _, err := store.PutLogImmutable(readerTestKey, []byte("shared synthetic log\n")); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := store.PutImmutable(readerTestKey, []byte("shared synthetic log\n")); err != nil {
+	if _, err := store.PutLogImmutable(readerTestKey, []byte("shared synthetic log\n")); err != nil {
 		t.Fatal(err)
 	}
 	assertReaderMode(t, filepath.Join(root, private), 0o600)
@@ -49,4 +49,29 @@ func TestLogReaderProvisionedFilesystem(t *testing.T) {
 	assertReaderMode(t, filepath.Join(root, readerTestKey), 0o640)
 	assertReaderMode(t, filepath.Dir(filepath.Join(root, readerTestKey)), 0o750)
 	t.Logf("shared=%s private=%s", filepath.Join(root, readerTestKey), filepath.Join(root, private))
+}
+
+// TestLogReaderProvisionedRead runs separately as the configured named reader
+// after the producer probe. It must not have access to the private policy.
+func TestLogReaderProvisionedRead(t *testing.T) {
+	root := os.Getenv("JOBMAN_TEST_LOG_READER_READ_ROOT")
+	if root == "" {
+		t.Skip("set JOBMAN_TEST_LOG_READER_READ_ROOT as the provisioned named reader")
+	}
+	reader, err := NewFilesystemReader("logs", 1, root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	contents := []byte("shared synthetic log\n")
+	data, err := reader.ReadVerified(readerTestKey, int64(len(contents)), Digest(contents))
+	if err != nil || string(data) != string(contents) {
+		t.Fatalf("named reader cannot read verified chunk: %v", err)
+	}
+	if _, err := NewFilesystemStore("logs", 1, root); err == nil {
+		t.Fatal("named reader unexpectedly initialized the producer policy")
+	}
+	private := strings.Replace(readerTestKey, "logs/stdout/00000001.chunk", "artifacts/result", 1)
+	if _, err := reader.ReadVerified(private, 27, Digest([]byte("private synthetic artifact\n"))); err == nil {
+		t.Fatal("named reader accessed private artifact")
+	}
 }

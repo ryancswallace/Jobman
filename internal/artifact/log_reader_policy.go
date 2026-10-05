@@ -86,7 +86,7 @@ func validLogUUID(value string) bool {
 	}
 	compact := strings.ReplaceAll(value, "-", "")
 	decoded, err := hex.DecodeString(compact)
-	return err == nil && len(decoded) == 16 && compact != strings.Repeat("0", 32) && value == strings.ToLower(value)
+	return err == nil && len(decoded) == 16 && decoded[6]>>4 >= 1 && decoded[6]>>4 <= 5 && decoded[8]>>6 == 2 && value == strings.ToLower(value)
 }
 
 // sharedLogPrefix identifies only the producer's existing canonical namespace,

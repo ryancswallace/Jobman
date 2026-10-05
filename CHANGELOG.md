@@ -10,6 +10,11 @@ semantic-release.
 
 ### Fixed
 
+- Keep designated-reader log staging inaccessible until immutable publication,
+  preserve private artifact access even at log-shaped keys, and permit verified
+  read-only consumers without access to producer policy files. Require canonical
+  shared-protocol UUID log paths and producer-owned private policy files.
+
 - Reconcile finished Slurm jobs through verified accounting when the live queue
   rejects their IDs, preserving native array-task identities. An unavailable
   task observation no longer blocks sibling results, logs, or cancellation

@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	readerTestKey    = "namespaces/research/jobs/01990000-0000-7000-8000-000000000001/executions/01990000-0000-7000-8000-000000000002/logs/stdout/00000001.chunk"
+	readerTestKey    = "namespaces/research/jobs/01990000-0000-4000-8000-000000000001/executions/01990000-0000-4000-8000-000000000002/logs/stdout/00000001.chunk"
 	readerTestPolicy = `{"schema_version":1,"store_name":"logs","store_version":1,"reader_uid":21901}`
 )
 
@@ -46,8 +46,10 @@ func TestLogReaderGrantAppliesOnlyToCanonicalLogChunks(t *testing.T) {
 		"logs/stdout/00000001.chunk", strings.Replace(readerTestKey, "/jobs/", "/artifacts/", 1),
 		strings.Replace(readerTestKey, "/stdout/", "/combined/", 1), strings.Replace(readerTestKey, "00000001.chunk", "1.chunk", 1),
 		strings.Replace(readerTestKey, "00000001.chunk", "00000000.chunk", 1), strings.Replace(readerTestKey, "00000001.chunk", "000000001.chunk", 1),
-		strings.Replace(readerTestKey, "01990000-0000-7000-8000-000000000001", "not-a-job", 1),
+		strings.Replace(readerTestKey, "01990000-0000-4000-8000-000000000001", "not-a-job", 1),
 		strings.Replace(readerTestKey, "research", "../research", 1), readerTestKey + "/extra",
+		strings.ReplaceAll(readerTestKey, "-4000-", "-7000-"),
+		strings.ReplaceAll(readerTestKey, "-8000-", "-c000-"),
 	} {
 		if isSharedLogKey(key) {
 			t.Errorf("broadened log grant for %q", key)

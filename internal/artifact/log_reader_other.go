@@ -18,6 +18,6 @@ func loadLogReaderPolicy(root, _ string, _ int64) (*logReaderPolicy, error) {
 	return nil, errors.New("configured log reader ACL policy requires a supported Linux filesystem")
 }
 
-func (*FilesystemStore) putReaderObject(string, io.Reader, int64, int64) (Object, error) {
+func (*FilesystemStore) putReaderObject(string, io.Reader, int64, int64, bool) (Object, error) {
 	return Object{}, errors.New("configured log reader ACL policy requires a supported Linux filesystem")
 }

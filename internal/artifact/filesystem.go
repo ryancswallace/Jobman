@@ -29,9 +29,9 @@ type FilesystemStore struct {
 	logReader *logReaderPolicy
 }
 
-// NewFilesystemStore validates one logical store mapping. The root must
+// validateFilesystemMapping validates one logical store mapping. The root must
 // already exist and must not itself be a symbolic link.
-func NewFilesystemStore(name string, version int64, root string) (*FilesystemStore, error) {
+func validateFilesystemMapping(name string, version int64, root string) (*FilesystemStore, error) {
 	if !storeNamePattern.MatchString(name) {
 		return nil, errors.New("artifact store name is invalid")
 	}
@@ -49,11 +49,21 @@ func NewFilesystemStore(name string, version int64, root string) (*FilesystemSto
 		return nil, errors.New("artifact store root must be a non-symlink directory")
 	}
 
+	return &FilesystemStore{name: name, version: version, root: root}, nil
+}
+
+// NewFilesystemStore validates the mapping and its producer policy before writes.
+func NewFilesystemStore(name string, version int64, root string) (*FilesystemStore, error) {
+	store, err := validateFilesystemMapping(name, version, root)
+	if err != nil {
+		return nil, err
+	}
 	policy, err := loadLogReaderPolicy(root, name, version)
 	if err != nil {
 		return nil, err
 	}
-	return &FilesystemStore{name: name, version: version, root: root, logReader: policy}, nil
+	store.logReader = policy
+	return store, nil
 }
 
 // Name is the stable logical store identity.
@@ -71,12 +81,24 @@ func (store *FilesystemStore) Root() string { return store.root }
 // is installed with a same-directory hard link so a crash cannot leave a
 // partial object at its published key.
 func (store *FilesystemStore) PutImmutable(key string, contents []byte) (string, error) {
+	return store.putImmutableObject(key, contents, false)
+}
+
+// PutLogImmutable publishes a canonical log chunk with the configured reader access.
+func (store *FilesystemStore) PutLogImmutable(key string, contents []byte) (string, error) {
+	if !isSharedLogKey(key) || len(contents) > maximumSharedLogChunkBytes {
+		return "", errors.New("log publication requires a bounded canonical log chunk")
+	}
+	return store.putImmutableObject(key, contents, true)
+}
+
+func (store *FilesystemStore) putImmutableObject(key string, contents []byte, logChunk bool) (string, error) {
 	destination, err := store.resolve(key)
 	if err != nil {
 		return "", err
 	}
 	if store.logReader != nil {
-		object, writeErr := store.putReaderObject(key, bytes.NewReader(contents), int64(len(contents)), int64(len(contents)))
+		object, writeErr := store.putReaderObject(key, bytes.NewReader(contents), int64(len(contents)), int64(len(contents)), logChunk)
 		return object.Checksum, writeErr
 	}
 	directory := filepath.Dir(destination)
@@ -267,7 +289,7 @@ func (store *FilesystemStore) PutFileImmutable(key, sourcePath string, maximumBy
 		return Object{}, errors.New("artifact output is not a bounded regular file")
 	}
 	if store.logReader != nil {
-		return store.putReaderObject(key, source, information.Size(), maximumBytes)
+		return store.putReaderObject(key, source, information.Size(), maximumBytes, false)
 	}
 	directory := filepath.Dir(destination)
 	if err = makePrivateDirectories(store.root, directory); err != nil {
