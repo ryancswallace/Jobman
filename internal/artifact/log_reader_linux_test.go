@@ -372,3 +372,28 @@ func TestPolicyStagingIsReaderInaccessibleUntilComplete(t *testing.T) {
 		t.Fatalf("publication left staging: %v %v", entries, err)
 	}
 }
+
+func TestPrivateStagingRejectsMissingInheritedPolicyAndCleansUp(t *testing.T) {
+	root := readerTestRoot(t)
+	store := readerTestStore(t, root)
+	parent, err := unix.Open(root, logDirectoryFlags, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer unix.Close(parent)
+	// If inheritance disappears between ancestor validation and creation,
+	// private mode bits alone must not authorize a publication directory.
+	if removeErr := unix.Removexattr(root, "system.posix_acl_default"); removeErr != nil {
+		t.Fatal(removeErr)
+	}
+	if _, _, stagingErr := createReaderStaging(parent, store.logReader); stagingErr == nil {
+		t.Fatal("staging accepted missing inherited ACL")
+	}
+	entries, err := os.ReadDir(root)
+	if err != nil || len(entries) != 1 || entries[0].Name() != logReaderPolicyFilename {
+		t.Fatalf("failed staging validation left directory: %v %v", entries, err)
+	}
+	if _, _, err := createReaderStaging(-1, store.logReader); err == nil {
+		t.Fatal("staging accepted invalid parent descriptor")
+	}
+}
