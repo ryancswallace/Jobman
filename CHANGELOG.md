@@ -8,6 +8,12 @@ semantic-release.
 
 ## [Unreleased]
 
+### Fixed
+
+- Safely stop log capture when supervisor control fails before a target exits,
+  preventing capture-channel closure and process-state observation races without
+  overriding the configured termination escalation policy.
+
 ### Added
 
 - Added a public, model-independent shared-job snapshot and evidence collector
