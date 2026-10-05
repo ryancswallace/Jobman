@@ -65,3 +65,17 @@ func (store *FilesystemStore) Publish(
 
 	return store.PutFileImmutable(key, sourcePath, maximumBytes)
 }
+
+// PutLog distinguishes agent log chunks from ordinary artifact payloads without
+// extending Store, so existing store implementations remain compatible.
+func PutLog(ctx context.Context, store Store, key string, contents []byte) (string, error) {
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+	if logs, ok := store.(interface {
+		PutLogImmutable(string, []byte) (string, error)
+	}); ok {
+		return logs.PutLogImmutable(key, contents)
+	}
+	return store.Put(ctx, key, contents)
+}

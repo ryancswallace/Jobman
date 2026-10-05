@@ -2,6 +2,7 @@
 package artifact
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -22,14 +23,15 @@ var storeNamePattern = regexp.MustCompile(`^[a-z][a-z0-9._-]{0,62}[a-z0-9]$|^[a-
 // filesystem root. Physical roots are deployment configuration and never part
 // of portable workload documents.
 type FilesystemStore struct {
-	name    string
-	version int64
-	root    string
+	name      string
+	version   int64
+	root      string
+	logReader *logReaderPolicy
 }
 
-// NewFilesystemStore validates one logical store mapping. The root must
+// validateFilesystemMapping validates one logical store mapping. The root must
 // already exist and must not itself be a symbolic link.
-func NewFilesystemStore(name string, version int64, root string) (*FilesystemStore, error) {
+func validateFilesystemMapping(name string, version int64, root string) (*FilesystemStore, error) {
 	if !storeNamePattern.MatchString(name) {
 		return nil, errors.New("artifact store name is invalid")
 	}
@@ -50,6 +52,20 @@ func NewFilesystemStore(name string, version int64, root string) (*FilesystemSto
 	return &FilesystemStore{name: name, version: version, root: root}, nil
 }
 
+// NewFilesystemStore validates the mapping and its producer policy before writes.
+func NewFilesystemStore(name string, version int64, root string) (*FilesystemStore, error) {
+	store, err := validateFilesystemMapping(name, version, root)
+	if err != nil {
+		return nil, err
+	}
+	policy, err := loadLogReaderPolicy(root, name, version)
+	if err != nil {
+		return nil, err
+	}
+	store.logReader = policy
+	return store, nil
+}
+
 // Name is the stable logical store identity.
 func (store *FilesystemStore) Name() string { return store.name }
 
@@ -65,9 +81,25 @@ func (store *FilesystemStore) Root() string { return store.root }
 // is installed with a same-directory hard link so a crash cannot leave a
 // partial object at its published key.
 func (store *FilesystemStore) PutImmutable(key string, contents []byte) (string, error) {
+	return store.putImmutableObject(key, contents, false)
+}
+
+// PutLogImmutable publishes a canonical log chunk with the configured reader access.
+func (store *FilesystemStore) PutLogImmutable(key string, contents []byte) (string, error) {
+	if !isSharedLogKey(key) || len(contents) > maximumSharedLogChunkBytes {
+		return "", errors.New("log publication requires a bounded canonical log chunk")
+	}
+	return store.putImmutableObject(key, contents, true)
+}
+
+func (store *FilesystemStore) putImmutableObject(key string, contents []byte, logChunk bool) (string, error) {
 	destination, err := store.resolve(key)
 	if err != nil {
 		return "", err
+	}
+	if store.logReader != nil {
+		object, writeErr := store.putReaderObject(key, bytes.NewReader(contents), int64(len(contents)), int64(len(contents)), logChunk)
+		return object.Checksum, writeErr
 	}
 	directory := filepath.Dir(destination)
 	if err = makePrivateDirectories(store.root, directory); err != nil {
@@ -232,7 +264,7 @@ func (store *FilesystemStore) MaterializeFile(
 // PutFileImmutable streams one bounded regular file into the store. The
 // destination is immutable and an identical replay is accepted.
 //
-//nolint:cyclop // The streaming immutable-write path handles every durability failure explicitly.
+//nolint:cyclop,gocognit // The streaming immutable-write path handles every durability failure explicitly.
 func (store *FilesystemStore) PutFileImmutable(key, sourcePath string, maximumBytes int64) (Object, error) {
 	if maximumBytes < 1 {
 		return Object{}, errors.New("artifact size limit must be positive")
@@ -255,6 +287,9 @@ func (store *FilesystemStore) PutFileImmutable(key, sourcePath string, maximumBy
 	}
 	if !information.Mode().IsRegular() || information.Size() > maximumBytes {
 		return Object{}, errors.New("artifact output is not a bounded regular file")
+	}
+	if store.logReader != nil {
+		return store.putReaderObject(key, source, information.Size(), maximumBytes, false)
 	}
 	directory := filepath.Dir(destination)
 	if err = makePrivateDirectories(store.root, directory); err != nil {

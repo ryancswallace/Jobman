@@ -1,0 +1,86 @@
+{
+  "origin": "Jobman-Lab synthetic NFSv4.2 probe; Linux server and client; sec=sys; root_squash; numeric UID mapping validated by actual broker read and nonreader/write denial",
+  "reader_uid": 21901,
+  "objects": {
+    ".": {
+      "mode": "0o750",
+      "uid": 21001,
+      "gid": 21001,
+      "xattrs": {
+        "system.nfs4_acl": {
+          "base64": "AAAACAAAAAAAAAAAABYB5wAAAAZPV05FUkAAAAAAAAAAAAAAABIAoQAAAAUyMTkwMQAAAAAAAAAAAAAAABIAgAAAAAZHUk9VUEAAAAAAAAAAAAAAABIAgAAAAAlFVkVSWU9ORUAAAAAAAAAAAAAACwAWAecAAAAGT1dORVJAAAAAAAAAAAAACwASAKEAAAAFMjE5MDEAAAAAAAAAAAAACwASAIAAAAAGR1JPVVBAAAAAAAAAAAAACwASAIAAAAAJRVZFUllPTkVAAAAA"
+        },
+        "system.posix_acl_access": {
+          "errno": 95
+        },
+        "system.posix_acl_default": {
+          "errno": 95
+        }
+      }
+    },
+    "readable": {
+      "mode": "0o640",
+      "uid": 21001,
+      "gid": 21001,
+      "xattrs": {
+        "system.nfs4_acl": {
+          "base64": "AAAABAAAAAAAAAAAABYBhwAAAAZPV05FUkAAAAAAAAAAAAAAABIAgQAAAAUyMTkwMQAAAAAAAAAAAAAAABIAgAAAAAZHUk9VUEAAAAAAAAAAAAAAABIAgAAAAAlFVkVSWU9ORUAAAAA="
+        },
+        "system.posix_acl_access": {
+          "errno": 95
+        },
+        "system.posix_acl_default": {
+          "errno": 95
+        }
+      }
+    },
+    "masked": {
+      "mode": "0o600",
+      "uid": 21001,
+      "gid": 21001,
+      "xattrs": {
+        "system.nfs4_acl": {
+          "base64": "AAAABAAAAAAAAAAAABYBhwAAAAZPV05FUkAAAAAAAAAAAAAAABIAgAAAAAUyMTkwMQAAAAAAAAAAAAAAABIAgAAAAAZHUk9VUEAAAAAAAAAAAAAAABIAgAAAAAlFVkVSWU9ORUAAAAA="
+        },
+        "system.posix_acl_access": {
+          "errno": 95
+        },
+        "system.posix_acl_default": {
+          "errno": 95
+        }
+      }
+    },
+    "traversable": {
+      "mode": "0o750",
+      "uid": 21001,
+      "gid": 21001,
+      "xattrs": {
+        "system.nfs4_acl": {
+          "base64": "AAAACAAAAAAAAAAAABYB5wAAAAZPV05FUkAAAAAAAAAAAAAAABIAoQAAAAUyMTkwMQAAAAAAAAAAAAAAABIAgAAAAAZHUk9VUEAAAAAAAAAAAAAAABIAgAAAAAlFVkVSWU9ORUAAAAAAAAAAAAAACwAWAecAAAAGT1dORVJAAAAAAAAAAAAACwASAKEAAAAFMjE5MDEAAAAAAAAAAAAACwASAIAAAAAGR1JPVVBAAAAAAAAAAAAACwASAIAAAAAJRVZFUllPTkVAAAAA"
+        },
+        "system.posix_acl_access": {
+          "errno": 95
+        },
+        "system.posix_acl_default": {
+          "errno": 95
+        }
+      }
+    },
+    "masked-dir": {
+      "mode": "0o700",
+      "uid": 21001,
+      "gid": 21001,
+      "xattrs": {
+        "system.nfs4_acl": {
+          "base64": "AAAACAAAAAAAAAAAABYB5wAAAAZPV05FUkAAAAAAAAAAAAAAABIAgAAAAAUyMTkwMQAAAAAAAAAAAAAAABIAgAAAAAZHUk9VUEAAAAAAAAAAAAAAABIAgAAAAAlFVkVSWU9ORUAAAAAAAAAAAAAACwAWAecAAAAGT1dORVJAAAAAAAAAAAAACwASAKEAAAAFMjE5MDEAAAAAAAAAAAAACwASAIAAAAAGR1JPVVBAAAAAAAAAAAAACwASAIAAAAAJRVZFUllPTkVAAAAA"
+        },
+        "system.posix_acl_access": {
+          "errno": 95
+        },
+        "system.posix_acl_default": {
+          "errno": 95
+        }
+      }
+    }
+  }
+}

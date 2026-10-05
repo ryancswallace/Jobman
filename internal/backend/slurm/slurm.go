@@ -212,24 +212,39 @@ func (adapter *Adapter) Observe(ctx context.Context, jobID string) (Observation,
 	if !validToken(jobID) {
 		return Observation{}, errors.New("observe Slurm job: invalid job ID")
 	}
-	output, err := adapter.runner.Run(
+	output, queueErr := adapter.runner.Run(
 		ctx, "squeue", "--jobs="+jobID, "--noheader", "--format=%i|%T|%r",
 	)
-	if err != nil {
+	if err := ctx.Err(); err != nil {
 		return Observation{}, fmt.Errorf("query Slurm queue: %w", err)
 	}
-	if strings.TrimSpace(string(output)) != "" {
+	// Slurm can reject an allocation ID after it has left the live queue.
+	// Failed command output is diagnostic text, never an observed job state.
+	if queueErr == nil && strings.TrimSpace(string(output)) != "" {
 		return parseQueueObservation(output, jobID)
 	}
-	output, err = adapter.runner.Run(
-		ctx, "sacct", "--jobs="+jobID, "--noheader", "--parsable2", "--allocations",
-		"--format=JobIDRaw,State,ExitCode,Reason,Cluster",
+	output, accountingErr := adapter.runner.Run(
+		ctx, "sacct", "--jobs="+jobID, "--noheader", "--parsable2", "--allocations", "--array",
+		// JobIDRaw identifies the allocation, which differs from ARRAY_TASK.
+		// Expanded JobID preserves the exact identity used at submission.
+		"--format=JobID%64,State,ExitCode,Reason,Cluster",
 	)
-	if err != nil {
+	if err := ctx.Err(); err != nil {
 		return Observation{}, fmt.Errorf("query Slurm accounting: %w", err)
 	}
+	var observation Observation
+	if accountingErr == nil {
+		observation, accountingErr = parseAccountingObservation(output, jobID)
+	}
+	if accountingErr == nil {
+		return observation, nil
+	}
+	accountingErr = fmt.Errorf("query Slurm accounting: %w", accountingErr)
+	if queueErr != nil {
+		return Observation{}, errors.Join(fmt.Errorf("query Slurm queue: %w", queueErr), accountingErr)
+	}
 
-	return parseAccountingObservation(output, jobID)
+	return Observation{}, accountingErr
 }
 
 // FindByName locates a possibly submitted job after an ambiguous sbatch

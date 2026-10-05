@@ -250,29 +250,34 @@ func (service *service) step(ctx context.Context) error {
 		}
 		service.capabilitySentAt = report.ObservedAt
 	}
-	if err := service.reconcileExecutions(ctx); err != nil {
-		return err
+	// An unavailable scheduler observation must not starve durable sibling
+	// events or cancellation polling. Keep publication's log-before-event
+	// ordering, and still return every reconciliation failure to the caller.
+	reconcileErr := service.reconcileExecutions(ctx)
+	if err := ctx.Err(); err != nil {
+		return errors.Join(reconcileErr, err)
 	}
 	if err := service.flushLogChunks(ctx); err != nil {
-		return err
+		return errors.Join(reconcileErr, err)
 	}
 	if err := service.flushEvents(ctx); err != nil {
-		return err
+		return errors.Join(reconcileErr, err)
 	}
 	if err := service.pollActions(ctx); err != nil {
-		return err
+		return errors.Join(reconcileErr, err)
 	}
 	if err := service.pollAssignments(ctx); err != nil {
-		return err
+		return errors.Join(reconcileErr, err)
 	}
-	if err := service.reconcileExecutions(ctx); err != nil {
-		return err
+	reconcileErr = errors.Join(reconcileErr, service.reconcileExecutions(ctx))
+	if err := ctx.Err(); err != nil {
+		return errors.Join(reconcileErr, err)
 	}
 	if err := service.flushLogChunks(ctx); err != nil {
-		return err
+		return errors.Join(reconcileErr, err)
 	}
 
-	return service.flushEvents(ctx)
+	return errors.Join(reconcileErr, service.flushEvents(ctx))
 }
 
 func (service *service) pollAssignments(ctx context.Context) error {
@@ -360,28 +365,31 @@ func (service *service) reconcileExecutions(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if arrayErr := service.reconcileSlurmArrays(ctx, executions); arrayErr != nil {
-		return arrayErr
-	}
+	reconcileErr := service.reconcileSlurmArrays(ctx, executions)
 	for _, execution := range executions {
+		if err := ctx.Err(); err != nil {
+			return errors.Join(reconcileErr, err)
+		}
 		effective := execution.Assignment.Document.Spec.EffectiveExecution
 		if effective.Metadata.SlurmArray != nil {
 			directory, directoryErr := executionDirectory(service.stateDirectory, effective.Metadata.ExecutionID)
 			if directoryErr != nil {
-				return directoryErr
+				reconcileErr = errors.Join(reconcileErr, directoryErr)
+				continue
 			}
 			if _, submissionErr := readSlurmSubmission(directory, effective.Metadata.ExecutionID); errors.Is(submissionErr, fs.ErrNotExist) {
 				continue
 			} else if submissionErr != nil {
-				return submissionErr
+				reconcileErr = errors.Join(reconcileErr, submissionErr)
+				continue
 			}
 		}
 		if err := service.reconcileExecution(ctx, execution); err != nil {
-			return err
+			reconcileErr = errors.Join(reconcileErr, err)
 		}
 	}
 
-	return nil
+	return reconcileErr
 }
 
 //nolint:cyclop,gocognit // Reconciliation handles each durable runner-manifest state explicitly.

@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/ryancswallace/jobman/internal/artifact"
 )
 
 const (
@@ -170,7 +172,7 @@ func (service *service) queueCapturedLog(
 		}
 		sequence := position.NextSequence
 		objectKey := logObjectKey(owner.namespace, owner.jobID, owner.executionID, stream, sequence)
-		checksum, err := service.artifactStore.Put(ctx, objectKey, contents)
+		checksum, err := artifact.PutLog(ctx, service.artifactStore, objectKey, contents)
 		if err != nil {
 			return fmt.Errorf("publish %s log: %w", stream, err)
 		}

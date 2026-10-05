@@ -10,6 +10,15 @@ semantic-release.
 
 ### Fixed
 
+- Keep designated-reader log staging inaccessible until immutable publication,
+  preserve private artifact access even at log-shaped keys, and permit verified
+  read-only consumers without access to producer policy files. Require canonical
+  shared-protocol UUID log paths and producer-owned private policy files.
+
+- Reconcile finished Slurm jobs through verified accounting when the live queue
+  rejects their IDs, preserving native array-task identities. An unavailable
+  task observation no longer blocks sibling results, logs, or cancellation
+  polling. Missing accounting alone never creates a terminal outcome.
 - Safely stop log capture when supervisor control fails before a target exits,
   preventing capture-channel closure and process-state observation races without
   overriding the configured termination escalation policy.
@@ -18,6 +27,10 @@ semantic-release.
 
 ### Added
 
+- Added an opt-in Linux filesystem log-reader policy for exact named-reader
+  POSIX or Linux NFSv4 ACLs. New immutable execution log chunks can inherit
+  broker read access while artifact payloads and default stores stay private.
+  Unexpected ACLs, masked existing paths, and unsupported platforms fail closed.
 - Added a public, model-independent shared-job snapshot and evidence collector
   for authorized Control metadata and bounded log-tail readers. Evidence schema
   2 seals deployment, Control instance, namespace, real job/run/execution and
