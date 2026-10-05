@@ -2786,6 +2786,51 @@ func TestWaitAndFinalizeRunClosedStore(t *testing.T) {
 	}
 }
 
+func TestWaitAndFinalizeRunControlErrorStopsBlockedCapture(t *testing.T) {
+	t.Parallel()
+
+	fixture := submitSupervisorFixture(t, true)
+	database := openSupervisorStore(t, fixture.stateDir)
+	closeSupervisorStore(t, database)
+	capture, err := logstore.CreateRun(fixture.stateDir, fixture.jobID.String(), 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = capture.Close() })
+	stdout, stdoutWriter := io.Pipe()
+	stderr, stderrWriter := io.Pipe()
+	t.Cleanup(func() {
+		_ = stdoutWriter.Close()
+		_ = stderrWriter.Close()
+	})
+	group := new(sync.WaitGroup)
+	captureErrors := make(chan error, 2)
+	group.Add(2)
+	go drainPipe(group, stdout, capture, logstore.Stdout, true, captureErrors)
+	go drainPipe(group, stderr, capture, logstore.Stderr, true, captureErrors)
+	stopCtx, stop := context.WithCancel(t.Context())
+	stop()
+	// The readers cannot finish until cleanup closes them. No process needs to
+	// run: Wait remains blocked behind the capture group until that happens.
+	target := &preparedTarget{command: new(exec.Cmd), stdout: stdout, stderr: stderr}
+	terminal, err := waitAndFinalizeRun(
+		stopCtx, t.Context(), database, capture, fixture.jobID, "", model.LogMetadata{},
+		target, platform.ProcessIdentity{}, group, captureErrors, time.Now().UTC(), 0, nil,
+	)
+	if terminal || err == nil || !strings.Contains(err.Error(), "record cancellation") {
+		t.Fatalf("control failure = (%v, %v)", terminal, err)
+	}
+	if !errors.Is(err, io.ErrClosedPipe) {
+		t.Fatalf("capture cleanup error = %v, want closed output pipes", err)
+	}
+	if _, open := <-captureErrors; open {
+		t.Fatal("capture error channel remains open after cleanup")
+	}
+	if _, err := capture.Append(logstore.Stdout, []byte("after close"), time.Now().UTC()); !errors.Is(err, logstore.ErrClosed) {
+		t.Fatalf("capture append after control failure = %v, want closed", err)
+	}
+}
+
 func TestWaitAndFinalizeRunMissingPersistedRun(t *testing.T) {
 	t.Parallel()
 

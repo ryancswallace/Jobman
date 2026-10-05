@@ -158,11 +158,26 @@ func validateDatabaseSidecarsWith(databasePath string, validateSecurity func(str
 			return fmt.Errorf("validate database sidecar links: %w", err)
 		}
 		if err := validateSecurity(path); err != nil {
+			// SQLite can remove a sidecar when the final concurrent connection
+			// closes, between Lstat and the Windows ACL query. Missing sidecars
+			// are allowed, but never skip an access failure on a replacement.
+			if databaseSidecarDisappeared(path, err) {
+				continue
+			}
 			return fmt.Errorf("validate database sidecar access: %w", err)
 		}
 	}
 
 	return nil
+}
+
+func databaseSidecarDisappeared(path string, validationErr error) bool {
+	if !errors.Is(validationErr, os.ErrNotExist) {
+		return false
+	}
+	_, err := os.Lstat(path)
+
+	return errors.Is(err, os.ErrNotExist)
 }
 
 func hardenDatabaseSidecars(databasePath string) error {
