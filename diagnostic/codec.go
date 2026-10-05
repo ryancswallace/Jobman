@@ -44,7 +44,9 @@ func JSONValue(value any) (json.RawMessage, error) {
 // Seal normalizes, validates, sizes, and hashes an evidence bundle.
 func Seal(value Evidence) (Evidence, error) {
 	value.Kind = Kind
-	value.SchemaVersion = SchemaVersion
+	if value.SchemaVersion == 0 {
+		value.SchemaVersion = SchemaVersion
+	}
 	value.EvidenceID = ""
 	value = normalize(value)
 	for index := range value.Artifacts {
@@ -162,7 +164,7 @@ func Decode(source io.Reader, limits DecodeLimits) (Evidence, error) {
 	if header.Kind != Kind {
 		return Evidence{}, fmt.Errorf("decode evidence: unsupported kind %q", header.Kind)
 	}
-	if header.SchemaVersion != SchemaVersion {
+	if header.SchemaVersion != SchemaVersion && header.SchemaVersion != SharedSchemaVersion {
 		return Evidence{}, fmt.Errorf("decode evidence: unsupported schema version %d", header.SchemaVersion)
 	}
 	var value Evidence
@@ -181,7 +183,7 @@ func validateEvidence(value Evidence, allowPlaceholderID bool) error {
 	if value.Kind != Kind {
 		return fmt.Errorf("validate evidence: kind is %q", value.Kind)
 	}
-	if value.SchemaVersion != SchemaVersion {
+	if value.SchemaVersion != SchemaVersion && value.SchemaVersion != SharedSchemaVersion {
 		return fmt.Errorf("validate evidence: unsupported schema version %d", value.SchemaVersion)
 	}
 	if allowPlaceholderID {
@@ -194,9 +196,11 @@ func validateEvidence(value Evidence, allowPlaceholderID bool) error {
 	if err := validateUTC("captured_at", value.CapturedAt); err != nil {
 		return err
 	}
-	if value.Source.JobmanVersion == "" || value.Source.CollectorVersion == "" ||
-		value.Source.StoreSchemaVersion < 1 || value.Source.Platform == "" {
+	if value.Source.JobmanVersion == "" || value.Source.CollectorVersion == "" || value.Source.Platform == "" {
 		return errors.New("validate evidence: incomplete source")
+	}
+	if err := validateEvidenceProvenance(value); err != nil {
+		return err
 	}
 	if !sortedUniqueStrings(value.Source.Capabilities) {
 		return errors.New("validate evidence: capabilities must be sorted and unique")
@@ -568,11 +572,12 @@ func semanticDigest(value Evidence) (string, error) {
 		Omissions        []Omission        `json:"omissions"`
 		RedactionNotices []RedactionNotice `json:"redaction_notices"`
 		Limits           Limits            `json:"limits"`
+		Shared           *SharedProvenance `json:"shared,omitempty"`
 	}{
 		Kind: value.Kind, SchemaVersion: value.SchemaVersion, Source: value.Source,
 		Subject: value.Subject, Consistency: value.Consistency, Items: value.Items,
 		Artifacts: semanticArtifacts, Omissions: value.Omissions,
-		RedactionNotices: value.RedactionNotices, Limits: semanticLimits,
+		RedactionNotices: value.RedactionNotices, Limits: semanticLimits, Shared: value.Shared,
 	}
 	encoded, err := json.Marshal(projection)
 	if err != nil {
