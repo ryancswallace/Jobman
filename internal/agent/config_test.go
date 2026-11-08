@@ -3,6 +3,7 @@ package agent
 import (
 	"bytes"
 	"flag"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -14,7 +15,8 @@ import (
 func TestAgentConfigurationOverridesAndServiceReference(t *testing.T) {
 	t.Setenv(agentConfigEnvironment, "")
 	path := filepath.Join(t.TempDir(), "agent.yml")
-	body := "schema_version: 1\nstate_dir: /var/lib/example-agent\npoll_interval: 4s\ncontainer_engine: podman\ncontainer_host_network: true\n"
+	state := filepath.Join(t.TempDir(), "state")
+	body := fmt.Sprintf("schema_version: 1\nstate_dir: %q\npoll_interval: 4s\ncontainer_engine: podman\ncontainer_host_network: true\n", state)
 	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -30,10 +32,10 @@ func TestAgentConfigurationOverridesAndServiceReference(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if *interval != 7*time.Second || *host || flags.Lookup("state-dir").Value.String() != "/var/lib/example-agent" {
+	if *interval != 7*time.Second || *host || flags.Lookup("state-dir").Value.String() != state {
 		t.Fatal("explicit flags did not win over configuration")
 	}
-	arguments, err := serviceRunArguments(InstallServiceOptions{ConfigPath: selected, ConfigOverrides: overrides}, "/var/lib/example-agent")
+	arguments, err := serviceRunArguments(InstallServiceOptions{ConfigPath: selected, ConfigOverrides: overrides}, state)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,7 +68,9 @@ func TestAgentConfigurationFailsClosedWithoutResolvingReferences(t *testing.T) {
 		}
 	}
 	path := filepath.Join(t.TempDir(), "refs.yml")
-	if err := os.WriteFile(path, []byte("schema_version: 1\ntoken_file: /not-present/token\nserver_ca: /not-present/ca.pem\n"), 0o600); err != nil {
+	missing := filepath.Join(t.TempDir(), "not-present")
+	body := fmt.Sprintf("schema_version: 1\ntoken_file: %q\nserver_ca: %q\n", filepath.Join(missing, "token"), filepath.Join(missing, "ca.pem"))
+	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	var output bytes.Buffer
