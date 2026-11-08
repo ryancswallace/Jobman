@@ -16,7 +16,8 @@ permissions:
 
 concurrency:
   group: repository-maintenance
-  cancel-in-progress: true
+  # A skipped or no-op Release run must not cancel publication metadata work.
+  cancel-in-progress: false
 
 jobs:
   update:
