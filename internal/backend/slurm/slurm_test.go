@@ -164,6 +164,26 @@ func TestObserveFallsBackToAccounting(t *testing.T) {
 	}
 }
 
+func TestObserveFallsBackToAccountingWhenQueueRejectsOldJobID(t *testing.T) {
+	t.Parallel()
+	runner := &fakeRunner{responses: []fakeResponse{
+		{output: "slurm_load_jobs error: Invalid job id specified\n", err: errors.New("exit status 1")},
+		{output: "12345|COMPLETED|0:0|None|alpha\n"},
+	}}
+	adapter, err := New(runner)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	observation, err := adapter.Observe(t.Context(), "12345")
+	if err != nil {
+		t.Fatalf("Observe() error = %v", err)
+	}
+	if !observation.Terminal || observation.State != "completed" ||
+		observation.Result == nil || observation.Result.Outcome != "success" {
+		t.Fatalf("Observe() = %#v", observation)
+	}
+}
+
 func TestObserveNormalizesQueueState(t *testing.T) {
 	t.Parallel()
 	runner := &fakeRunner{responses: []fakeResponse{{output: "12345|PENDING|Resources\n"}}}

@@ -4,9 +4,9 @@
 # that would otherwise require repository administration access.
 
 repository:
-  description: "A daemon-less command line job manager with flexible support for retries, timeouts, logging, notifications, and more."
+  description: "A daemon-optional command line job manager with flexible support for retries, timeouts, logging, notifications, and more."
   homepage: "https://jobman.tech/"
-  topics: "background-jobs, cli, command-line, daemonless, go, job-manager, logging, monitoring-tool, nohup, notifications, process-supervisor, retries, timeouts"
+  topics: "background-jobs, cli, command-line, daemon-optional, daemonless, go, job-manager, logging, monitoring-tool, nohup, notifications, process-supervisor, retries, timeouts"
   has_issues: true
   has_projects: false
   has_wiki: false
