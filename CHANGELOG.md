@@ -18,6 +18,15 @@ semantic-release.
   request replay and exclusive service/credential writer locking. Generated
   Linux services preserve independent execution runners when the agent stops.
 
+## [1.10.0] - 2026-11-08
+
+### Added
+
+- Added strict agent YAML configuration with explicit flag precedence, native
+  schema exports and isolated validators, and safe organization presentation
+  and message-of-the-day hooks. Installed services retain their configuration
+  path and explicit overrides without embedding credentials.
+
 ## [1.9.1] - 2026-11-08
 
 ### Fixed
@@ -47,11 +56,6 @@ semantic-release.
   connection closes, while retaining access checks for any replacement file.
 
 ### Added
-
-- Added strict agent YAML configuration with explicit flag precedence, native
-  schema exports and isolated validators, and safe organization presentation
-  and message-of-the-day hooks. Installed services retain their configuration
-  path and explicit overrides without embedding credentials.
 
 - Added an opt-in Linux filesystem log-reader policy for exact named-reader
   POSIX or Linux NFSv4 ACLs. New immutable execution log chunks can inherit
@@ -578,7 +582,8 @@ Release version.
 
 [Keep a Changelog]: https://keepachangelog.com/en/1.1.0/
 [Semantic Versioning]: https://semver.org/spec/v2.0.0.html
-[Unreleased]: https://github.com/ryancswallace/jobman/compare/v1.9.1...HEAD
+[Unreleased]: https://github.com/ryancswallace/jobman/compare/v1.10.0...HEAD
+[1.10.0]: https://github.com/ryancswallace/jobman/compare/v1.9.1...v1.10.0
 [1.9.1]: https://github.com/ryancswallace/jobman/compare/v1.9.0...v1.9.1
 [1.9.0]: https://github.com/ryancswallace/jobman/compare/v1.8.0...v1.9.0
 [1.8.0]: https://github.com/ryancswallace/jobman/compare/v1.7.0...v1.8.0
