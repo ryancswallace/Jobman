@@ -76,6 +76,9 @@ func TestInstallUserServiceLifecycle(t *testing.T) {
 	if err != nil || quoteErr != nil || !strings.Contains(string(contents), "ExecStart="+quotedBinary+" ") {
 		t.Fatalf("installed unit = %q, %v", contents, err)
 	}
+	if !strings.Contains(string(contents), "\nKillMode=process\n") {
+		t.Fatal("installed service would terminate independent execution runners on stop")
+	}
 	information, err := os.Stat(unit)
 	if err != nil {
 		t.Fatalf("stat installed unit: %v", err)

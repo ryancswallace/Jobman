@@ -27,6 +27,7 @@ const (
 	defaultPollInterval         = 2 * time.Second
 	staleLaunchClaim            = 30 * time.Second
 	capabilityInterval          = 5 * time.Minute
+	sessionRenewalRetryInterval = time.Minute
 	defaultMaximumArtifactBytes = 1024 * 1024 * 1024
 )
 
@@ -155,6 +156,11 @@ func RunService(ctx context.Context, options ServiceOptions) error {
 	if err != nil {
 		return fmt.Errorf("run agent service: %w", err)
 	}
+	stateLock, err := lockState(stateDirectory)
+	if err != nil {
+		return fmt.Errorf("run agent service: %w", err)
+	}
+	defer func() { _ = stateLock.Close() }()
 	if options.RunnerExecutable == "" {
 		options.RunnerExecutable, err = os.Executable()
 		if err != nil {
@@ -166,6 +172,9 @@ func RunService(ctx context.Context, options ServiceOptions) error {
 		return fmt.Errorf("run agent service: %w", err)
 	}
 	defer client.Close()
+	if err = checkRecoveryBeforeService(stateDirectory, client.credentials); err != nil {
+		return fmt.Errorf("run agent service: %w", err)
+	}
 	spool, err := OpenSpool(ctx, stateDirectory)
 	if err != nil {
 		if ctx.Err() != nil {
@@ -204,22 +213,23 @@ func RunService(ctx context.Context, options ServiceOptions) error {
 }
 
 type service struct {
-	stateDirectory       string
-	runnerExecutable     string
-	logger               *slog.Logger
-	client               *Client
-	spool                *Spool
-	artifactStore        artifact.Store
-	maximumLogBytes      int64
-	maximumArtifactBytes int64
-	slurm                slurmScheduler
-	container            *runtimeenv.Adapter
-	slurmRoot            string
-	slurmRunner          string
-	executionUser        string
-	capabilityReport     *CapabilityReport
-	capabilitySentAt     time.Time
-	startExecution       func(string, string) error
+	stateDirectory        string
+	runnerExecutable      string
+	logger                *slog.Logger
+	client                *Client
+	spool                 *Spool
+	artifactStore         artifact.Store
+	maximumLogBytes       int64
+	maximumArtifactBytes  int64
+	slurm                 slurmScheduler
+	container             *runtimeenv.Adapter
+	slurmRoot             string
+	slurmRunner           string
+	executionUser         string
+	capabilityReport      *CapabilityReport
+	capabilitySentAt      time.Time
+	sessionRenewalTriedAt time.Time
+	startExecution        func(string, string) error
 }
 
 func (service *service) stepAndReport(ctx context.Context) {
@@ -228,19 +238,32 @@ func (service *service) stepAndReport(ctx context.Context) {
 	}
 }
 
-//nolint:cyclop // One polling step deliberately sequences every durable control-plane queue.
-func (service *service) step(ctx context.Context) error {
-	sessionExpiresAt := service.client.SessionExpiresAt()
-	if !sessionExpiresAt.IsZero() && time.Until(sessionExpiresAt) <= 5*time.Minute {
-		if err := service.client.RenewSession(ctx, service.stateDirectory); err != nil {
-			return err
-		}
+// A failed inert session renewal must not prevent mTLS certificate renewal or
+// publication of already-authorized work. The coordinator still independently
+// decides whether this agent is eligible for new assignments.
+func (service *service) renewSessionIfNeeded(ctx context.Context) {
+	expiresAt := service.client.SessionExpiresAt()
+	if expiresAt.IsZero() || time.Until(expiresAt) > 5*time.Minute ||
+		(!service.sessionRenewalTriedAt.IsZero() && time.Since(service.sessionRenewalTriedAt) < sessionRenewalRetryInterval) {
+		return
 	}
+	service.sessionRenewalTriedAt = time.Now()
+	if err := service.client.RenewSession(ctx, service.stateDirectory); err != nil {
+		service.logger.WarnContext(ctx, "agent session renewal failed", "error", err)
+		return
+	}
+	service.sessionRenewalTriedAt = time.Time{}
+}
+
+func (service *service) step(ctx context.Context) error {
+	// Renew the certificate first: session expiry must never starve the
+	// credential that authenticates renewal and every execution operation.
 	if time.Until(service.client.CertificateExpiresAt()) <= 20*time.Minute {
 		if err := service.client.RenewCertificate(ctx, service.stateDirectory); err != nil {
 			return err
 		}
 	}
+	service.renewSessionIfNeeded(ctx)
 	if service.capabilityReport != nil && (service.capabilitySentAt.IsZero() ||
 		time.Since(service.capabilitySentAt) >= capabilityInterval) {
 		report := *service.capabilityReport

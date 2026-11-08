@@ -8,6 +8,16 @@ semantic-release.
 
 ## [Unreleased]
 
+### Fixed
+
+- Renew agent certificates before compatibility sessions and bound failed session
+  renewal retries so an expired session cannot starve certificate maintenance or
+  already-authorized execution observations.
+- Recover expired agent credentials through a fresh operator enrollment grant
+  while preserving the same agent identity and execution journal, with durable
+  request replay and exclusive service/credential writer locking. Generated
+  Linux services preserve independent execution runners when the agent stops.
+
 ## [1.9.1] - 2026-11-08
 
 ### Fixed

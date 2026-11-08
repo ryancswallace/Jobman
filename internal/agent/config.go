@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -79,7 +80,7 @@ func loadAgentConfiguration(path string) (agentConfiguration, error) {
 	if err != nil {
 		return result, fmt.Errorf("inspect agent configuration: %w", err)
 	}
-	if !information.Mode().IsRegular() || runtime.GOOS != "windows" && information.Mode().Perm()&0o022 != 0 {
+	if !information.Mode().IsRegular() || runtime.GOOS != operatingSystemWindows && information.Mode().Perm()&0o022 != 0 {
 		return result, errors.New("agent configuration must be a regular file and not group/world writable")
 	}
 	// #nosec G304 -- only an explicitly selected deployment configuration is read.
@@ -309,7 +310,7 @@ func agentConfigurationSchema() map[string]any {
 }
 
 func executeAgentConfig(args []string, stdout io.Writer) error {
-	if len(args) == 1 && args[0] == "schema" {
+	if slices.Equal(args, []string{"schema"}) {
 		return json.NewEncoder(stdout).Encode(agentConfigurationSchema())
 	}
 	if len(args) != 2 || (args[0] != "validate" && args[0] != "show") {

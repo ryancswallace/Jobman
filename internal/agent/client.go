@@ -23,6 +23,8 @@ import (
 
 const (
 	controlAPIVersion         = "jobman.control/v1alpha1"
+	agentSessionKind          = "AgentSession"
+	agentAuthScheme           = "Jobman-Agent"
 	maximumResponseSize       = 4 << 20
 	pendingEnrollmentFilename = "pending-enrollment.json"
 )
@@ -113,6 +115,11 @@ func Enroll(ctx context.Context, stateDirectory, token string, values Enrollment
 	if err != nil {
 		return fmt.Errorf("enroll agent: %w", err)
 	}
+	stateLock, err := lockState(prepared)
+	if err != nil {
+		return fmt.Errorf("enroll agent: %w", err)
+	}
+	defer func() { _ = stateLock.Close() }()
 	if _, statErr := os.Stat(filepath.Join(prepared, agentCredentialsFilename)); statErr == nil {
 		return errors.New("enroll agent: state directory is already enrolled")
 	} else if !errors.Is(statErr, os.ErrNotExist) {
@@ -135,10 +142,10 @@ func Enroll(ctx context.Context, stateDirectory, token string, values Enrollment
 	if err = performJSON(ctx, client, baseURL, http.MethodPost, "/v1/agent/enroll", "Jobman-Enrollment "+token, pending.Request, &response); err != nil {
 		return fmt.Errorf("enroll agent: %w", err)
 	}
-	if response.APIVersion != controlAPIVersion || response.Kind != "AgentSession" ||
+	if response.APIVersion != controlAPIVersion || response.Kind != agentSessionKind ||
 		response.Metadata.AgentID == "" || response.Metadata.SessionID == "" ||
 		response.Metadata.ExpiresAt.IsZero() || response.Spec.Token == "" ||
-		response.Spec.AuthScheme != "Jobman-Agent" || response.Spec.InertOnly ||
+		response.Spec.AuthScheme != agentAuthScheme || response.Spec.InertOnly ||
 		response.Spec.Certificate.CertificatePEM == "" || response.Spec.Certificate.ExpiresAt.IsZero() {
 		return errors.New("enroll agent: control server returned an invalid session")
 	}
@@ -350,10 +357,10 @@ func (client *Client) RenewSession(ctx context.Context, stateDirectory string) e
 	); err != nil {
 		return fmt.Errorf("renew agent session: %w", err)
 	}
-	if response.APIVersion != controlAPIVersion || response.Kind != "AgentSession" ||
+	if response.APIVersion != controlAPIVersion || response.Kind != agentSessionKind ||
 		response.Metadata.AgentID != client.AgentID() || response.Metadata.SessionID == "" ||
-		response.Metadata.ExpiresAt.IsZero() || response.Spec.Token == "" ||
-		response.Spec.AuthScheme != "Jobman-Agent" || !response.Spec.InertOnly {
+		!response.Metadata.ExpiresAt.After(time.Now()) || response.Spec.Token == "" ||
+		response.Spec.AuthScheme != agentAuthScheme || !response.Spec.InertOnly {
 		return errors.New("renew agent session: control server returned an invalid session")
 	}
 	updated := client.credentials
@@ -581,12 +588,13 @@ func (client *Client) RenewCertificate(ctx context.Context, stateDirectory strin
 	updated.PrivateKeyPEM = privateKey
 	updated.CertificatePEM = []byte(response.CertificatePEM)
 	updated.Metadata.CertificateExpiresAt = response.ExpiresAt.UTC()
-	if err = saveCredentials(stateDirectory, updated); err != nil {
-		return fmt.Errorf("renew agent certificate: %w", err)
-	}
 	newHTTPClient, err := newMTLSHTTPClient(updated)
 	if err != nil {
 		return fmt.Errorf("renew agent certificate: activate: %w", err)
+	}
+	if err = saveCredentials(stateDirectory, updated); err != nil {
+		newHTTPClient.CloseIdleConnections()
+		return fmt.Errorf("renew agent certificate: %w", err)
 	}
 	client.httpClient.CloseIdleConnections()
 	client.httpClient = newHTTPClient

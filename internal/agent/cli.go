@@ -30,6 +30,8 @@ func ExecuteCLI(ctx context.Context, args []string, stdin io.Reader, stdout, std
 		return executeAgentConfig(args[1:], stdout)
 	case "enroll":
 		return executeEnroll(ctx, args[1:], stdin, stdout, stderr)
+	case "recover":
+		return executeRecover(ctx, args[1:], stdin, stdout, stderr)
 	case agentRunCommand:
 		return executeRun(ctx, args[1:], stderr)
 	case "install-service":
@@ -146,6 +148,32 @@ func executeEnroll(
 	}
 	_, err = fmt.Fprintln(stdout, "agent enrolled")
 
+	return err
+}
+
+func executeRecover(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
+	flags := flag.NewFlagSet("jobman-agent recover", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	directory := flags.String("state-dir", "", "existing absolute host-local agent state directory; stop the service first")
+	tokenFile := flags.String("token-file", "-", "fresh enrollment token file, or - for standard input")
+	if err := flags.Parse(args); err != nil {
+		return err
+	}
+	if flags.NArg() != 0 || *directory == "" {
+		return errors.New("recover requires --state-dir")
+	}
+	token, err := readEnrollmentToken(stdin, *tokenFile)
+	if err != nil {
+		return err
+	}
+	currentUser, err := user.Current()
+	if err != nil {
+		return fmt.Errorf("read execution user: %w", err)
+	}
+	if recoverErr := Recover(ctx, *directory, token, currentUser.Username); recoverErr != nil {
+		return recoverErr
+	}
+	_, err = fmt.Fprintln(stdout, "agent credentials recovered; existing identity and execution journal preserved")
 	return err
 }
 
@@ -485,6 +513,7 @@ Commands:
   config          validate, show, or describe agent deployment configuration
   bootstrap       install, enroll, and start an agent through OpenSSH
   enroll          enroll this host with Jobman Control
+  recover         recover expired credentials with a fresh enrollment token
   install-service install the per-user systemd service
   run             run the polling agent service
   run-array-task  internal Slurm array task runner
