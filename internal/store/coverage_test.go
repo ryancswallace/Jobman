@@ -1060,7 +1060,7 @@ func TestSchemaAndMigrationValidationEdges(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		// Finish rollback before testing cancels this subtest's context; an
+		// Finish rollback before testing cancels the transaction context; an
 		// asynchronous cancellation rollback can otherwise outlive DB cleanup.
 		defer func() {
 			if rollbackErr := tx.Rollback(); rollbackErr != nil {
@@ -1077,7 +1077,7 @@ func TestSchemaAndMigrationValidationEdges(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		// Finish rollback before testing cancels this subtest's context; an
+		// Finish rollback before testing cancels the transaction context; an
 		// asynchronous cancellation rollback can otherwise outlive DB cleanup.
 		defer func() {
 			if rollbackErr := tx.Rollback(); rollbackErr != nil {
