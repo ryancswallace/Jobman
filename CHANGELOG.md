@@ -8,6 +8,8 @@ semantic-release.
 
 ## [Unreleased]
 
+## [1.10.1] - 2026-11-08
+
 ### Fixed
 
 - Renew agent certificates before compatibility sessions and bound failed session
@@ -582,7 +584,8 @@ Release version.
 
 [Keep a Changelog]: https://keepachangelog.com/en/1.1.0/
 [Semantic Versioning]: https://semver.org/spec/v2.0.0.html
-[Unreleased]: https://github.com/ryancswallace/jobman/compare/v1.10.0...HEAD
+[Unreleased]: https://github.com/ryancswallace/jobman/compare/v1.10.1...HEAD
+[1.10.1]: https://github.com/ryancswallace/jobman/compare/v1.10.0...v1.10.1
 [1.10.0]: https://github.com/ryancswallace/jobman/compare/v1.9.1...v1.10.0
 [1.9.1]: https://github.com/ryancswallace/jobman/compare/v1.9.0...v1.9.1
 [1.9.0]: https://github.com/ryancswallace/jobman/compare/v1.8.0...v1.9.0
