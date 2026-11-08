@@ -1416,14 +1416,20 @@ func TestEnrollmentDurabilityFailureBoundaries(t *testing.T) {
 		return response
 	}
 	t.Run("credential save", func(t *testing.T) {
-		stateDirectory := t.TempDir()
+		parent := t.TempDir()
+		stateDirectory := filepath.Join(parent, "state")
+		if err := os.Mkdir(stateDirectory, 0o700); err != nil {
+			t.Fatal(err)
+		}
 		server := startServer(t, http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
 			pendingPath := filepath.Join(stateDirectory, pendingEnrollmentFilename)
 			if err := os.Remove(pendingPath); err != nil {
 				t.Errorf("remove pending enrollment: %v", err)
 			}
-			if err := os.Remove(stateDirectory); err != nil {
-				t.Errorf("remove state directory: %v", err)
+			// Move the whole directory, including the held writer lock, to inject
+			// a destination failure without weakening the production lock.
+			if err := os.Rename(stateDirectory, filepath.Join(parent, "displaced")); err != nil {
+				t.Errorf("move state directory: %v", err)
 			}
 			if err := os.WriteFile(stateDirectory, []byte("file"), 0o600); err != nil {
 				t.Errorf("replace state directory: %v", err)

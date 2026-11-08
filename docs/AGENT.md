@@ -70,6 +70,12 @@ prevents new assignments. Draining stops new work while preserving control of
 already accepted executions. Agent silence marks their observations stale but
 does not prove termination or permit automatic reassignment.
 
+Certificate renewal runs before compatibility-session renewal. A failed session
+renewal is retried at most once per minute and does not prevent certificate
+renewal, publication, or cancellation polling. With a compatible Control server,
+a still-valid, authorized mTLS certificate can recover an expired compatibility
+session. Existing session and certificate lifetimes and revocation checks remain.
+
 An assignment offer is inert. The agent first journals the exact offer in its
 host-local SQLite spool, requests durable acceptance, and journals the returned
 launch authorization before it starts a runner. A runner uses an exclusive
@@ -237,8 +243,60 @@ jobman-agent install-service --start \
 jobman-agent status --json --state-dir /var/lib/jobman-agent-user
 ```
 
+### Recover after a long interruption
+
+Before stopping an existing Linux service, ensure its effective systemd unit
+uses `KillMode=process` and reload the service manager after any unit change.
+Older units use systemd’s default group termination, which would kill running
+jobs. Do not stop such a unit while jobs are active until this setting is applied.
+The generated unit now includes it so independent execution runners survive
+agent restarts; stopping the agent does not cancel jobs.
+
+If both credentials expired while the host was stopped, stop its agent service
+and obtain a fresh normal enrollment token for the **same principal, target
+generation, and execution user** through Control. Run as that execution user:
+
+```console
+jobman-agent recover --state-dir /var/lib/jobman-agent-user \
+  --token-file /private/path/to/fresh-enrollment-token
+jobman-agent status --json --state-dir /var/lib/jobman-agent-user
+```
+
+`--token-file -` reads the token from standard input. The command pins the
+existing Control origin and CA, agent ID, target generation, and prior
+certificate serial. Control must support `POST /v1/agent/recover`; deploy that
+compatible server before using this command. Recovery authenticates with the
+fresh grant over verified server TLS, without presenting or accepting an
+expired client certificate. It does not modify target policy, the execution
+journal, assignments, or local runner state. Restart the service after success;
+existing pending observations can then reconcile under the same identity.
+
+Keep the token private until recovery succeeds. A private
+`credential-recovery.json` records the exact request and generated key before
+sending; retry an uncertain operation with the **same token**. The receipt
+contains a token hash, never the grant itself, and remains mode 0600 to support
+replay after a lost command response. A different token is refused while an
+operation is unresolved. Completed recovery may begin again with a fresh grant
+if credentials expire during another interruption. The service and credential
+commands share a state lock that fails immediately when another writer holds it; child runners retain access to their
+journal. Stop an older agent version explicitly before upgrading or recovery,
+since older versions do not take that lock.
+
+A revoked agent or prior certificate, a retired generation, changed principal,
+or a conflicting recovery is rejected. Preserve the state directory and ask the
+Control operator to investigate; do not delete enrollment files or create a
+replacement agent over an execution journal. If an earlier certificate rotation
+lost its response after revoking the old certificate, this fail-closed case also
+requires operator inspection rather than treating revocation as expiry. If the
+replayed recovery session has already expired, Control also refuses replay; a
+consumed token cannot create a new recovery. For any persistent authorization
+or conflict rejection, retain the token and state files and have the Control
+operator inspect the recorded recovery and current agent status. Do not discard
+the receipt, change identity, or weaken certificate verification to retry.
+
 The generated unit uses the exact binary and arguments, mode 0600, a private
-umask, restart-on-failure, and systemd process/filesystem hardening. The user
+umask, restart-on-failure, `KillMode=process` to preserve independent execution
+runners on service stop, and systemd process/filesystem hardening. The user
 manager must be configured to remain available when that is required by site
 policy; Jobman does not enable lingering or modify login policy.
 

@@ -253,6 +253,7 @@ Type=simple
 ExecStart=` + strings.Join(command, " ") + `
 Restart=on-failure
 RestartSec=5s
+KillMode=process
 UMask=0077
 NoNewPrivileges=true
 PrivateTmp=true
