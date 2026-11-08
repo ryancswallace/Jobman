@@ -183,3 +183,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution requirements.
 [security policy]: SECURITY.md
 [shared-mode preview guide]: docs/SHARED_MODE.md
 [user guides]: https://jobman.tech/guides/
+
+Deployment-specific settings can be kept outside the source checkout. See
+[deployment configuration](docs/DEPLOYMENT_CONFIGURATION.md) for native schemas,
+isolated validators, agent YAML configuration, and optional organization text.

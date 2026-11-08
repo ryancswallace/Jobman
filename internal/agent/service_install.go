@@ -21,6 +21,9 @@ const (
 // InstallServiceOptions describes a per-user systemd installation. It never
 // grants privileges or installs a system-wide unit.
 type InstallServiceOptions struct {
+	ConfigPath           string
+	ConfigOverrides      []string
+	LogLevel             string
 	StateDirectory       string
 	AgentBinary          string
 	UnitDirectory        string
@@ -152,6 +155,21 @@ func InstallUserService(ctx context.Context, options InstallServiceOptions) (str
 
 //nolint:cyclop,gocognit,nestif // Arguments mirror explicit administrator-selected service policy.
 func serviceRunArguments(options InstallServiceOptions, stateDirectory string) ([]string, error) {
+	if options.ConfigPath != "" {
+		if !filepath.IsAbs(options.ConfigPath) || filepath.Clean(options.ConfigPath) != options.ConfigPath {
+			return nil, errors.New("install agent service: configuration must be an absolute normalized path")
+		}
+		if _, err := loadAgentConfiguration(options.ConfigPath); err != nil {
+			return nil, err
+		}
+		for _, argument := range options.ConfigOverrides {
+			name, _, present := strings.Cut(strings.TrimPrefix(argument, "--"), "=")
+			if !present || !strings.HasPrefix(argument, "--") || !agentRunFlag(name) {
+				return nil, errors.New("install agent service: invalid configuration override")
+			}
+		}
+		return append([]string{agentRunCommand, "--config", options.ConfigPath}, options.ConfigOverrides...), nil
+	}
 	pollInterval := options.PollInterval
 	if pollInterval == 0 {
 		pollInterval = defaultPollInterval
@@ -183,10 +201,13 @@ func serviceRunArguments(options InstallServiceOptions, stateDirectory string) (
 		return nil, errors.New("install agent service: Slurm root and runner are required together")
 	}
 	arguments := []string{
-		"run", "--state-dir", stateDirectory,
+		agentRunCommand, "--state-dir", stateDirectory,
 		"--poll-interval", pollInterval.String(),
 		maximumLogBytesFlag, strconv.FormatInt(maximumLogBytes, 10),
 		"--max-artifact-bytes", strconv.FormatInt(maximumArtifactBytes, 10),
+	}
+	if options.LogLevel != "" {
+		arguments = append(arguments, "--log-level", options.LogLevel)
 	}
 	if options.ArtifactStoreName != "" {
 		arguments = append(arguments,
@@ -206,7 +227,7 @@ func serviceRunArguments(options InstallServiceOptions, stateDirectory string) (
 			if options.ArtifactS3Owner != "" {
 				arguments = append(arguments, "--artifact-s3-expected-owner", options.ArtifactS3Owner)
 			}
-			if options.AWSExecutable != "" && options.AWSExecutable != "aws" {
+			if options.AWSExecutable != "" && options.AWSExecutable != defaultAWSExecutable {
 				arguments = append(arguments, "--aws-cli", options.AWSExecutable)
 			}
 		}

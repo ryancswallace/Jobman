@@ -54,6 +54,9 @@ var knownNotificationEvents = map[string]struct{}{
 
 // Validate checks the complete effective configuration and all named references.
 func (configuration Config) Validate() error {
+	if err := configuration.Presentation.Validate(); err != nil {
+		return err
+	}
 	if configuration.SchemaVersion != SchemaVersion {
 		return fmt.Errorf("configuration schema_version must be %d", SchemaVersion)
 	}

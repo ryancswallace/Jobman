@@ -5,6 +5,8 @@ The published user and operator manual is available on the
 `devel/sitedocs/` stages selected canonical documents from this directory for
 publication without duplicating their maintained source.
 
+- `DEPLOYMENT_CONFIGURATION.md` documents external deployment configuration,
+  native schema exports, isolated validation, and agent configuration.
 - `design/` records the target product model and architectural constraints.
 - `DIAGNOSTIC_EVIDENCE.md` documents the implemented evidence schema, limits,
   privacy boundary, and compatibility fixtures.
