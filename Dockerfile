@@ -2,13 +2,13 @@
 
 # These defaults match go.version and the release image. Base-image upgrades
 # must update each tag and its pinned digest together.
-ARG GO_VERSION=1.26.6
+ARG GO_VERSION=1.26.10
 ARG ALPINE_VERSION=3.24
 ARG VERSION=dev
 ARG VCS_REF=unknown
 ARG BUILD_DATE=unknown
 
-FROM --platform=$BUILDPLATFORM golang:${GO_VERSION}-alpine${ALPINE_VERSION}@sha256:af8d6740070b8906d12eae1c3e3ea0957fb63f492051ea05e354c38ef9fe88df AS build
+FROM --platform=$BUILDPLATFORM golang:${GO_VERSION}-alpine${ALPINE_VERSION}@sha256:87c65a688975c0b1d4585d204874c45ca78354670e3a5f11368c5a492303d696 AS build
 
 ARG VERSION
 ARG VCS_REF
