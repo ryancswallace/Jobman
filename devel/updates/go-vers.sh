@@ -67,7 +67,10 @@ replace_extended() {
 GO_LANG_VERSION=$(printf '%s\n' "$GO_VERS" | sed -E 's/^([0-9]+\.[0-9]+).*/\1/')
 
 printf '%s\n' "$GO_VERS" > go.version
-replace "s/^go .*/go $GO_LANG_VERSION/" go.mod
+# Dependencies can require the first toolchain release (for example 1.26.0),
+# which Go orders after the language version 1.26. Keep the module baseline
+# normalized without requiring the patch used to build this repository.
+replace "s/^go .*/go $GO_LANG_VERSION.0/" go.mod
 replace "s/^  go: \".*\"/  go: \"$GO_LANG_VERSION\"/" .golangci.yml
 replace "s/^ARG GO_VERSION=.*/ARG GO_VERSION=$GO_VERS/" Dockerfile .devcontainer/Dockerfile
 replace "s/^ARG GO_FEATURE_VERSION=.*/ARG GO_FEATURE_VERSION=$GO_LANG_VERSION/" \

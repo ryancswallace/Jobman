@@ -44,7 +44,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build,sharing=locked \
       -o /out/jobman \
       .
 
-FROM alpine:${ALPINE_VERSION}@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b AS runtime
+FROM alpine:${ALPINE_VERSION}@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a AS runtime
 
 # Bash is required by jobman's command runner. Tini forwards signals and reaps
 # orphaned child processes when jobman is PID 1. CA roots and timezone data make

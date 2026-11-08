@@ -12,6 +12,8 @@ semantic-release.
 
 - Build with Go 1.26.10 to include the latest standard-library security fixes,
   and refresh YAML, Windows I/O, system-call, and SQLite dependencies.
+- Preserve the normalized Go module baseline during repository maintenance so
+  documentation generation and dependency validation continue to pass.
 
 ## [1.9.0] - 2026-10-05
 
