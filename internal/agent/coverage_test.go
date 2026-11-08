@@ -1416,23 +1416,12 @@ func TestEnrollmentDurabilityFailureBoundaries(t *testing.T) {
 		return response
 	}
 	t.Run("credential save", func(t *testing.T) {
-		parent := t.TempDir()
-		stateDirectory := filepath.Join(parent, "state")
-		if err := os.Mkdir(stateDirectory, 0o700); err != nil {
-			t.Fatal(err)
-		}
+		stateDirectory := t.TempDir()
 		server := startServer(t, http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
-			pendingPath := filepath.Join(stateDirectory, pendingEnrollmentFilename)
-			if err := os.Remove(pendingPath); err != nil {
-				t.Errorf("remove pending enrollment: %v", err)
-			}
-			// Move the whole directory, including the held writer lock, to inject
-			// a destination failure without weakening the production lock.
-			if err := os.Rename(stateDirectory, filepath.Join(parent, "displaced")); err != nil {
-				t.Errorf("move state directory: %v", err)
-			}
-			if err := os.WriteFile(stateDirectory, []byte("file"), 0o600); err != nil {
-				t.Errorf("replace state directory: %v", err)
+			// Occupy the credential destination without moving the held writer
+			// lock; Windows forbids moving its containing directory while open.
+			if err := os.Mkdir(filepath.Join(stateDirectory, agentCredentialsFilename), 0o700); err != nil {
+				t.Errorf("occupy credential destination: %v", err)
 			}
 			writer.Header().Set("Content-Type", "application/json")
 			writeTestJSON(t, writer, validSession())
@@ -1441,6 +1430,9 @@ func TestEnrollmentDurabilityFailureBoundaries(t *testing.T) {
 		request.ServerURL = server.URL
 		if err := Enroll(t.Context(), stateDirectory, "token", request); err == nil {
 			t.Fatal("Enroll() accepted credential save failure")
+		}
+		if _, err := os.Stat(filepath.Join(stateDirectory, pendingEnrollmentFilename)); err != nil {
+			t.Fatalf("pending enrollment was not preserved after save failure: %v", err)
 		}
 	})
 	t.Run("pending removal", func(t *testing.T) {
