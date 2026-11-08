@@ -8,6 +8,8 @@ semantic-release.
 
 ## [Unreleased]
 
+## [1.9.1] - 2026-11-08
+
 ### Fixed
 
 - Build with Go 1.26.10 to include the latest standard-library security fixes,
@@ -566,7 +568,8 @@ Release version.
 
 [Keep a Changelog]: https://keepachangelog.com/en/1.1.0/
 [Semantic Versioning]: https://semver.org/spec/v2.0.0.html
-[Unreleased]: https://github.com/ryancswallace/jobman/compare/v1.9.0...HEAD
+[Unreleased]: https://github.com/ryancswallace/jobman/compare/v1.9.1...HEAD
+[1.9.1]: https://github.com/ryancswallace/jobman/compare/v1.9.0...v1.9.1
 [1.9.0]: https://github.com/ryancswallace/jobman/compare/v1.8.0...v1.9.0
 [1.8.0]: https://github.com/ryancswallace/jobman/compare/v1.7.0...v1.8.0
 [1.7.0]: https://github.com/ryancswallace/jobman/compare/v1.6.0...v1.7.0
