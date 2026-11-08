@@ -10,6 +10,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -218,6 +219,9 @@ func TestRecoveryRequiresStoppedServiceAndRejectsInvalidInputs(t *testing.T) {
 	if err = Recover(t.Context(), directory, "grant", "alice"); err == nil || !strings.Contains(err.Error(), "state is in use") {
 		t.Fatalf("active service recovery error=%v", err)
 	}
+	if err = RunService(t.Context(), ServiceOptions{StateDirectory: directory, Logger: slog.New(slog.DiscardHandler)}); err == nil || !strings.Contains(err.Error(), "state is in use") {
+		t.Fatalf("second service writer error=%v", err)
+	}
 	if err = lock.Close(); err != nil {
 		t.Fatal(err)
 	}
@@ -372,6 +376,9 @@ func TestRecoveryCLIAndPendingStartupBoundary(t *testing.T) {
 	if err = checkRecoveryBeforeService(second, old); err == nil {
 		t.Fatal("service accepted unresolved recovery")
 	}
+	if err = RunService(t.Context(), ServiceOptions{StateDirectory: second, Logger: slog.New(slog.DiscardHandler)}); err == nil || !strings.Contains(err.Error(), "recovery is pending") {
+		t.Fatalf("service startup with unresolved recovery error=%v", err)
+	}
 	if _, _, err = prepareRecovery(second, old, "pending-grant", "bob"); err == nil {
 		t.Fatal("recovery accepted different execution user")
 	}
@@ -399,5 +406,79 @@ func TestRecoveryReceiptBoundaries(t *testing.T) {
 	}
 	if _, err := readRecovery(directory); err == nil {
 		t.Fatal("accepted directory as recovery receipt")
+	}
+}
+
+func TestRecoveryReceiptExpiryAndCredentialMismatch(t *testing.T) {
+	pki := newTestPKI(t)
+	directory := t.TempDir()
+	old := saveExpiredRecoveryCredentials(t, pki, directory, "https://control.example.test")
+	pending, _, err := prepareRecovery(directory, old, "grant", "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	updated, err := recoveredCredentials(old, pending, recoveryResponse(t, pki, pending.Request))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err = resumeRecovery(pending, updated, pending.TokenHash); err == nil {
+		t.Fatal("pending request accepted a changed certificate")
+	}
+	if err = completeRecovery(directory, &pending, old); err == nil {
+		t.Fatal("completion accepted credentials from before recovery")
+	}
+	// A retry after the credential write must finalize its receipt itself.
+	if _, done, prepareErr := prepareRecovery(directory, updated, "grant", "alice"); prepareErr != nil || !done {
+		t.Fatalf("resume after credential write = %t, %v", done, prepareErr)
+	}
+	if _, _, err = prepareRecovery(directory, updated, "new-grant", "alice"); err == nil {
+		t.Fatal("fresh grant replaced a still-valid certificate")
+	}
+	updated.Metadata.CertificateExpiresAt = time.Now().Add(-time.Hour)
+	if _, _, err = prepareRecovery(directory, updated, "grant", "alice"); err == nil {
+		t.Fatal("old grant replay accepted a later credential expiry")
+	}
+	// A later real certificate expiry requires and accepts a fresh grant.
+	if next, done, prepareErr := prepareRecovery(directory, old, "new-grant", "alice"); prepareErr != nil || done || next.TokenHash == pending.TokenHash {
+		t.Fatalf("new expiry recovery = %t, %v", done, prepareErr)
+	}
+}
+
+func TestRecoveryRejectsDamagedCredentialsAndReceiptWrites(t *testing.T) {
+	pki := newTestPKI(t)
+	directory := t.TempDir()
+	old := saveExpiredRecoveryCredentials(t, pki, directory, "https://control.example.test")
+	pending, _, err := prepareRecovery(directory, old, "grant", "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	broken := old
+	broken.PrivateKeyPEM = []byte("invalid key")
+	if _, _, err = newRecovery(directory, broken, "token-hash", "alice"); err == nil {
+		t.Fatal("accepted damaged credentials for recovery")
+	}
+	if err = completeRecovery(directory, &pending, broken); err == nil {
+		t.Fatal("accepted damaged completion credentials")
+	}
+	if err = os.WriteFile(filepath.Join(directory, recoveryFilename), []byte("invalid receipt"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err = prepareRecovery(directory, old, "grant", "alice"); err == nil {
+		t.Fatal("accepted damaged receipt")
+	}
+	if _, _, err = newRecovery(filepath.Join(directory, "missing"), old, "token-hash", "alice"); err == nil {
+		t.Fatal("recovery accepted a failed durable request write")
+	}
+	updated, err := recoveredCredentials(old, pending, recoveryResponse(t, pki, pending.Request))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = completeRecovery(filepath.Join(directory, "missing"), &pending, updated); err == nil {
+		t.Fatal("recovery accepted a failed durable completion write")
+	}
+	response := recoveryResponse(t, pki, pending.Request)
+	response.Spec.Certificate.CACertificatePEM = string(newTestPKI(t).caPEM)
+	if _, err = recoveredCredentials(old, pending, response); err == nil {
+		t.Fatal("accepted certificate signed by a different CA")
 	}
 }
