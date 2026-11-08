@@ -10,6 +10,13 @@ semantic-release.
 
 ### Fixed
 
+- Build with Go 1.26.10 to include the latest standard-library security fixes,
+  and refresh YAML, Windows I/O, system-call, and SQLite dependencies.
+
+## [1.9.0] - 2026-10-05
+
+### Fixed
+
 - Keep designated-reader log staging inaccessible until immutable publication,
   preserve private artifact access even at log-shaped keys, and permit verified
   read-only consumers without access to producer policy files. Require canonical
@@ -552,7 +559,8 @@ Release version.
 
 [Keep a Changelog]: https://keepachangelog.com/en/1.1.0/
 [Semantic Versioning]: https://semver.org/spec/v2.0.0.html
-[Unreleased]: https://github.com/ryancswallace/jobman/compare/v1.8.0...HEAD
+[Unreleased]: https://github.com/ryancswallace/jobman/compare/v1.9.0...HEAD
+[1.9.0]: https://github.com/ryancswallace/jobman/compare/v1.8.0...v1.9.0
 [1.8.0]: https://github.com/ryancswallace/jobman/compare/v1.7.0...v1.8.0
 [1.7.0]: https://github.com/ryancswallace/jobman/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/ryancswallace/jobman/compare/v1.5.0...v1.6.0
