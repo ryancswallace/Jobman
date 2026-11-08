@@ -16,6 +16,11 @@ func TestReleaseAbandonedRunDetectsMarkerMutation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(func() {
+		if closeErr := run.Close(); closeErr != nil {
+			t.Error(closeErr)
+		}
+	})
 	marker := run.Paths().Active
 	err = ReleaseAbandonedRun(t.Context(), stateDir, testJobID, 1, func(context.Context) (bool, error) {
 		if removeErr := os.Remove(marker); removeErr != nil {
