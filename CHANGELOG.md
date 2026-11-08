@@ -38,6 +38,11 @@ semantic-release.
 
 ### Added
 
+- Added strict agent YAML configuration with explicit flag precedence, native
+  schema exports and isolated validators, and safe organization presentation
+  and message-of-the-day hooks. Installed services retain their configuration
+  path and explicit overrides without embedding credentials.
+
 - Added an opt-in Linux filesystem log-reader policy for exact named-reader
   POSIX or Linux NFSv4 ACLs. New immutable execution log chunks can inherit
   broker read access while artifact payloads and default stores stay private.

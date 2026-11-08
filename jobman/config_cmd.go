@@ -18,6 +18,11 @@ func newConfigCommand(dependencies dependencies, root *rootOptions) *cobra.Comma
 		Args:  usageArgs(cobra.NoArgs),
 	}
 	command.AddCommand(
+		&cobra.Command{
+			Use: "schema", Short: "Emit the native configuration JSON Schema",
+			Args: usageArgs(cobra.NoArgs),
+			RunE: func(command *cobra.Command, _ []string) error { return writeJSON(command, config.JSONSchema()) },
+		},
 		newConfigShowCommand(root),
 		newConfigPathsCommand(root),
 		newConfigValidateCommand(root),
@@ -115,11 +120,22 @@ func newConfigPathsCommand(root *rootOptions) *cobra.Command {
 }
 
 func newConfigValidateCommand(root *rootOptions) *cobra.Command {
-	return &cobra.Command{
+	var isolated bool
+	command := &cobra.Command{
 		Use:   "validate [PATH]",
 		Short: "Strictly validate effective configuration",
 		Args:  usageArgs(cobra.MaximumNArgs(1)),
 		RunE: func(command *cobra.Command, arguments []string) error {
+			if isolated {
+				if len(arguments) != 1 || root.configPath != "" {
+					return usageError(errors.New("--isolated requires PATH and cannot be combined with --config"))
+				}
+				if _, err := config.Load(config.FileSource(config.SourceExplicit, arguments[0])); err != nil {
+					return err
+				}
+				_, err := fmt.Fprintln(command.OutOrStdout(), "valid")
+				return err
+			}
 			selected := *root
 			if len(arguments) == 1 {
 				if root.configPath != "" {
@@ -139,4 +155,6 @@ func newConfigValidateCommand(root *rootOptions) *cobra.Command {
 			return nil
 		},
 	}
+	command.Flags().BoolVar(&isolated, "isolated", false, "validate only PATH over built-in defaults, without environment or discovered files")
+	return command
 }
