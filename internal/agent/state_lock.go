@@ -45,5 +45,5 @@ func lockState(directory string) (*os.File, error) {
 }
 
 func privateFileMode(mode fs.FileMode) bool {
-	return runtime.GOOS == "windows" || mode.Perm()&0o077 == 0
+	return runtime.GOOS == operatingSystemWindows || mode.Perm()&0o077 == 0
 }

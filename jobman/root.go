@@ -70,6 +70,9 @@ func newRootCommand(dependencies dependencies) *cobra.Command {
 		SilenceUsage:  true,
 		RunE: func(command *cobra.Command, arguments []string) error {
 			if len(arguments) == 0 {
+				if err := writeInteractivePresentation(command, dependencies, options); err != nil {
+					return err
+				}
 				return command.Help()
 			}
 
@@ -102,6 +105,7 @@ func newRootCommand(dependencies dependencies) *cobra.Command {
 	command.ValidArgsFunction = rootArgumentCompletion(dependencies, options)
 
 	command.AddCommand(
+		newAboutCommand(dependencies, options),
 		newRunCommand(dependencies, options),
 		newListCommand(dependencies, options),
 		newStatusCommand(dependencies, options),

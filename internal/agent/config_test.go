@@ -1,0 +1,168 @@
+package agent
+
+import (
+	"bytes"
+	"flag"
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"reflect"
+	"runtime"
+	"strings"
+	"testing"
+	"time"
+)
+
+func TestAgentConfigurationOverridesAndServiceReference(t *testing.T) {
+	t.Setenv(agentConfigEnvironment, "")
+	path := filepath.Join(t.TempDir(), "agent.yml")
+	state := filepath.Join(t.TempDir(), "state")
+	body := fmt.Sprintf("schema_version: 1\nstate_dir: %q\npoll_interval: 4s\ncontainer_engine: podman\ncontainer_host_network: true\n", state)
+	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	flags := flag.NewFlagSet("test", flag.ContinueOnError)
+	flags.String("state-dir", "", "")
+	interval := flags.Duration("poll-interval", time.Second, "")
+	host := flags.Bool("container-host-network", true, "")
+	if err := flags.Parse([]string{"--poll-interval=7s", "--container-host-network=false"}); err != nil {
+		t.Fatal(err)
+	}
+	overrides := agentRunOverrides(flags)
+	selected, err := applyAgentConfiguration(flags, path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if *interval != 7*time.Second || *host || flags.Lookup("state-dir").Value.String() != state {
+		t.Fatal("explicit flags did not win over configuration")
+	}
+	arguments, err := serviceRunArguments(InstallServiceOptions{ConfigPath: selected, ConfigOverrides: overrides}, state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := []string{"run", "--config", path, "--container-host-network=false", "--poll-interval=7s"}
+	if !reflect.DeepEqual(arguments, expected) {
+		t.Fatalf("service arguments = %v", arguments)
+	}
+	configuration, err := loadAgentConfiguration(path)
+	if err != nil || configuration.Origins["poll_interval"] != path || configuration.Origins["max_log_bytes"] != "built-in" {
+		t.Fatalf("provenance: %v, %v", configuration.Origins, err)
+	}
+}
+
+func TestAgentConfigurationFailsClosedWithoutResolvingReferences(t *testing.T) {
+	t.Parallel()
+	for _, invalid := range []string{
+		"schema_version: 1\npoll_interval: 0s\n", "schema_version: 1\nunknown: secret\n",
+		"schema_version: 1\nserver: http://example.com\n", "schema_version: 1\nmax_log_bytes: 0\n",
+		"schema_version: 1\nstate_dir: &state /tmp/state\n", "schema_version: 1\nstate_dir: /tmp/one\nstate_dir: /tmp/two\n",
+		"schema_version: 1\n---\nschema_version: 1\n", "schema_version: 1\ncontainer_host_network: true\n",
+		"schema_version: 1\nslurm_root: /tmp/slurm\n", "schema_version: 1\ntoken_file: relative\n",
+		"schema_version: 1\ncontainer_host_network: yes\n", "state_dir: /tmp/state\n",
+		"", "[1, 2]\n", "schema_version: [\n", "schema_version: 2\n",
+		"schema_version: 1\nmax_log_bytes: 9223372036854775808\n",
+		"schema_version: 1\ncontainer_engine: unsupported\n",
+		"schema_version: 1\nartifact_store: shared\n",
+		"schema_version: 1\nartifact_s3_bucket: example\n",
+		"schema_version: 1\nlog_level: unsupported\n",
+	} {
+		path := filepath.Join(t.TempDir(), "invalid.yml")
+		if err := os.WriteFile(path, []byte(invalid), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := loadAgentConfiguration(path); err == nil {
+			t.Errorf("accepted %q", invalid)
+		}
+	}
+	path := filepath.Join(t.TempDir(), "refs.yml")
+	missing := filepath.Join(t.TempDir(), "not-present")
+	body := fmt.Sprintf("schema_version: 1\ntoken_file: %q\nserver_ca: %q\n", filepath.Join(missing, "token"), filepath.Join(missing, "ca.pem"))
+	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	var output bytes.Buffer
+	if err := executeAgentConfig([]string{"validate", path}, &output); err != nil || output.String() != "valid\n" {
+		t.Fatalf("validation opened references: %v", err)
+	}
+	if err := executeAgentConfig([]string{"show", path}, &output); err != nil {
+		t.Fatal(err)
+	}
+	if err := executeAgentConfig([]string{"schema"}, &output); err != nil || !strings.Contains(output.String(), "additionalProperties") {
+		t.Fatalf("schema: %v", err)
+	}
+}
+
+func TestAgentConfigurationRejectsUnsafeFiles(t *testing.T) {
+	t.Parallel()
+	if _, err := loadAgentConfiguration(t.TempDir()); err == nil {
+		t.Fatal("accepted a directory as configuration")
+	}
+	path := filepath.Join(t.TempDir(), "agent.yml")
+	if err := os.WriteFile(path, []byte(strings.Repeat("#", 1024*1024+1)), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := loadAgentConfiguration(path); err == nil || !strings.Contains(err.Error(), "exceeds 1 MiB") {
+		t.Fatalf("oversized configuration error = %v", err)
+	}
+	if runtime.GOOS != "windows" {
+		// #nosec G302 -- verify rejection of an intentionally unsafe synthetic configuration.
+		if err := os.Chmod(path, 0o622); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := loadAgentConfiguration(path); err == nil || !strings.Contains(err.Error(), "not group/world writable") {
+			t.Fatalf("writable configuration error = %v", err)
+		}
+	}
+}
+
+func TestAgentConfigurationCommandFailures(t *testing.T) {
+	t.Parallel()
+	for _, args := range [][]string{nil, {"schema", "extra"}, {"validate"}, {"unknown", "path"}, {"validate", filepath.Join(t.TempDir(), "missing.yml")}} {
+		var output bytes.Buffer
+		if err := executeAgentConfig(args, &output); err == nil || output.Len() != 0 {
+			t.Errorf("config %v: error = %v, output = %q", args, err, output.String())
+		}
+	}
+	configuration, err := loadAgentConfiguration("")
+	if err != nil || configuration.Origins["poll_interval"] != "built-in" || configuration.Values["poll_interval"] != "2s" {
+		t.Fatalf("default configuration = %v, %v", configuration, err)
+	}
+}
+
+func TestAgentConfigurationEnvironmentAndFlagCompatibility(t *testing.T) {
+	flags := flag.NewFlagSet("test", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	t.Setenv(agentConfigEnvironment, "")
+	if path, err := applyAgentConfiguration(flags, ""); err != nil || path != "" {
+		t.Fatalf("unconfigured agent: path = %q, error = %v", path, err)
+	}
+	t.Setenv(agentConfigEnvironment, "relative.yml")
+	if _, err := applyAgentConfiguration(flags, ""); err == nil {
+		t.Fatal("accepted a relative environment reference")
+	}
+	path := filepath.Join(t.TempDir(), "agent.yml")
+	if err := os.WriteFile(path, []byte("schema_version: 1\ncontainer_engine: podman\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv(agentConfigEnvironment, path)
+	flags.Int("container-engine", 0, "incompatible flag to detect catalog drift")
+	if _, err := applyAgentConfiguration(flags, ""); err == nil || !strings.Contains(err.Error(), "apply agent configuration field container_engine") {
+		t.Fatalf("incompatible flag error = %v", err)
+	}
+}
+
+func TestAgentConfigurationExplicitPathWinsOverEnvironment(t *testing.T) {
+	t.Setenv(agentConfigEnvironment, "/not-present/agent.yml")
+	path := filepath.Join(t.TempDir(), "agent.yml")
+	if err := os.WriteFile(path, []byte("schema_version: 1\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	flags := flag.NewFlagSet("test", flag.ContinueOnError)
+	if _, err := applyAgentConfiguration(flags, path); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := applyAgentConfiguration(flags, ""); err == nil {
+		t.Fatal("missing environment-selected file did not fail closed")
+	}
+}

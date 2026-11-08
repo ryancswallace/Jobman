@@ -101,3 +101,15 @@ documents defaults, scalar forms, every registry, notifier constraints, and
 safety rules. Download the commented
 [sample configuration]({{ site.baseurl }}/assets/examples/jobman.yml) as a
 starting point.
+
+## Deployment integration
+
+`jobman config schema` emits the native field schema. Use
+`jobman config validate --isolated PATH` to validate a generated deployment file
+without reading user, system, project, or environment configuration. Optional
+`presentation` fields select organization text, help links, and a message of the
+day; `jobman about` displays them without changing job or JSON output.
+
+The separately packaged agent accepts strict YAML through `--config PATH` or
+`JOBMAN_AGENT_CONFIG`. Use `jobman-agent config schema`, `config validate PATH`,
+and `config show PATH` to inspect the native contract and provenance.

@@ -44,6 +44,7 @@ type Config struct {
 	Profiles            map[string]Profile       `yaml:"profiles" json:"profiles"`
 	Shared              SharedConfig             `yaml:"shared" json:"shared"`
 	Redaction           RedactionConfig          `yaml:"redaction" json:"redaction"`
+	Presentation        Presentation             `yaml:"presentation" json:"presentation"`
 }
 
 // SharedConfig contains explicitly selected pre-release control-service profiles.

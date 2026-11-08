@@ -41,6 +41,12 @@ shared:
 redaction:
   names: []
   patterns: []
+presentation:
+  organization: ""
+  display_name: ""
+  documentation_url: ""
+  support_url: ""
+  motd: ""
 `
 
 // SourceKind identifies a configuration precedence layer.

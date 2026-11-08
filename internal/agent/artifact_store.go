@@ -91,7 +91,7 @@ func appendArtifactRunnerArguments(
 		if selected.ExpectedBucketOwner() != "" {
 			arguments = append(arguments, "--artifact-s3-expected-owner", selected.ExpectedBucketOwner())
 		}
-		if selected.AWSExecutable() != "aws" {
+		if selected.AWSExecutable() != defaultAWSExecutable {
 			arguments = append(arguments, "--aws-cli", selected.AWSExecutable())
 		}
 	}

@@ -26,11 +26,13 @@ func ExecuteCLI(ctx context.Context, args []string, stdin io.Reader, stdout, std
 		return errors.New("agent command is required")
 	}
 	switch args[0] {
+	case "config":
+		return executeAgentConfig(args[1:], stdout)
 	case "enroll":
 		return executeEnroll(ctx, args[1:], stdin, stdout, stderr)
 	case "recover":
 		return executeRecover(ctx, args[1:], stdin, stdout, stderr)
-	case "run":
+	case agentRunCommand:
 		return executeRun(ctx, args[1:], stderr)
 	case "install-service":
 		return executeInstallService(ctx, args[1:], stdout, stderr)
@@ -66,6 +68,7 @@ func executeEnroll(
 ) error {
 	flags := flag.NewFlagSet("jobman-agent enroll", flag.ContinueOnError)
 	flags.SetOutput(stderr)
+	configPath := registerAgentConfiguration(flags)
 	stateDirectory := flags.String("state-dir", "", "absolute host-local agent state directory")
 	serverURL := flags.String("server", "", "Jobman Control HTTPS origin")
 	targetGenerationID := flags.String("target-generation", "", "target generation UUID")
@@ -76,6 +79,9 @@ func executeEnroll(
 	containerExecutable := flags.String("container-runtime", "", "container engine executable")
 	containerHostNetwork := flags.Bool("container-host-network", false, "allow portable host-network requests")
 	if err := flags.Parse(args); err != nil {
+		return err
+	}
+	if _, err := applyAgentConfiguration(flags, *configPath); err != nil {
 		return err
 	}
 	if flags.NArg() != 0 || *stateDirectory == "" || *serverURL == "" || *targetGenerationID == "" {
@@ -124,7 +130,7 @@ func executeEnroll(
 		return err
 	}
 	if containerRuntime != nil {
-		if *slurmEnabled != (containerRuntime.Engine() == "apptainer") {
+		if *slurmEnabled != (containerRuntime.Engine() == agentApptainer) {
 			return errors.New("apptainer is required for Slurm and unsupported for subprocess targets")
 		}
 		runtimes = append(runtimes, runtimeContainer)
@@ -174,6 +180,8 @@ func executeRecover(ctx context.Context, args []string, stdin io.Reader, stdout,
 func executeRun(ctx context.Context, args []string, stderr io.Writer) error {
 	flags := flag.NewFlagSet("jobman-agent run", flag.ContinueOnError)
 	flags.SetOutput(stderr)
+	configPath := registerAgentConfiguration(flags)
+	logLevel := flags.String("log-level", "info", "structured log level: debug, info, warn, or error")
 	stateDirectory := flags.String("state-dir", "", "absolute host-local agent state directory")
 	pollInterval := flags.Duration("poll-interval", defaultPollInterval, "control-plane poll interval")
 	artifactStore := flags.String("artifact-store", "", "logical local or NFS artifact store name")
@@ -183,7 +191,7 @@ func executeRun(ctx context.Context, args []string, stderr io.Writer) error {
 	artifactS3Prefix := flags.String("artifact-s3-prefix", "", "optional S3 object prefix")
 	artifactS3Region := flags.String("artifact-s3-region", "", "optional AWS region")
 	artifactS3Owner := flags.String("artifact-s3-expected-owner", "", "expected 12-digit AWS account ID")
-	awsExecutable := flags.String("aws-cli", "aws", "AWS CLI executable")
+	awsExecutable := flags.String("aws-cli", defaultAWSExecutable, "AWS CLI executable")
 	containerEngine := flags.String("container-engine", "", "docker, podman, or apptainer runtime")
 	containerExecutable := flags.String("container-runtime", "", "container engine executable")
 	containerHostNetwork := flags.Bool("container-host-network", false, "allow portable host-network requests")
@@ -194,13 +202,20 @@ func executeRun(ctx context.Context, args []string, stderr io.Writer) error {
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
+	if _, err := applyAgentConfiguration(flags, *configPath); err != nil {
+		return err
+	}
 	if flags.NArg() != 0 || *stateDirectory == "" {
 		return errors.New("run requires --state-dir")
 	}
 	if (*slurmRoot == "") != (*slurmRunner == "") {
 		return errors.New("run requires --slurm-root and --slurm-runner together")
 	}
-	logger := slog.New(slog.NewJSONHandler(stderr, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	var level slog.Level
+	if err := level.UnmarshalText([]byte(*logLevel)); err != nil {
+		return errors.New("invalid agent log level")
+	}
+	logger := slog.New(slog.NewJSONHandler(stderr, &slog.HandlerOptions{Level: level}))
 
 	return RunService(ctx, ServiceOptions{
 		StateDirectory: *stateDirectory, PollInterval: *pollInterval, Logger: logger,
@@ -219,6 +234,8 @@ func executeRun(ctx context.Context, args []string, stderr io.Writer) error {
 func executeInstallService(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	flags := flag.NewFlagSet("jobman-agent install-service", flag.ContinueOnError)
 	flags.SetOutput(stderr)
+	configPath := registerAgentConfiguration(flags)
+	logLevel := flags.String("log-level", "info", "structured log level: debug, info, warn, or error")
 	stateDirectory := flags.String("state-dir", "", "absolute host-local agent state directory")
 	agentBinary := flags.String("agent-binary", "", "absolute agent binary path (defaults to this executable)")
 	unitDirectory := flags.String("unit-dir", "", "systemd user unit directory")
@@ -231,7 +248,7 @@ func executeInstallService(ctx context.Context, args []string, stdout, stderr io
 	artifactS3Prefix := flags.String("artifact-s3-prefix", "", "optional S3 object prefix")
 	artifactS3Region := flags.String("artifact-s3-region", "", "optional AWS region")
 	artifactS3Owner := flags.String("artifact-s3-expected-owner", "", "expected 12-digit AWS account ID")
-	awsExecutable := flags.String("aws-cli", "aws", "AWS CLI executable")
+	awsExecutable := flags.String("aws-cli", defaultAWSExecutable, "AWS CLI executable")
 	containerEngine := flags.String("container-engine", "", "docker, podman, or apptainer runtime")
 	containerExecutable := flags.String("container-runtime", "", "container engine executable")
 	containerHostNetwork := flags.Bool("container-host-network", false, "allow portable host-network requests")
@@ -242,10 +259,16 @@ func executeInstallService(ctx context.Context, args []string, stdout, stderr io
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
+	explicitRunFlags := agentRunOverrides(flags)
+	selectedConfig, configErr := applyAgentConfiguration(flags, *configPath)
+	if configErr != nil {
+		return configErr
+	}
 	if flags.NArg() != 0 || *stateDirectory == "" {
 		return errors.New("install-service requires --state-dir")
 	}
 	unit, err := InstallUserService(ctx, InstallServiceOptions{
+		ConfigPath: selectedConfig, ConfigOverrides: explicitRunFlags, LogLevel: *logLevel,
 		StateDirectory: *stateDirectory, AgentBinary: *agentBinary, UnitDirectory: *unitDirectory,
 		Start: *start, PollInterval: *pollInterval, ArtifactStoreName: *artifactStore,
 		ArtifactStoreVersion: *artifactStoreVersion, ArtifactRoot: *artifactRoot,
@@ -268,9 +291,13 @@ func executeInstallService(ctx context.Context, args []string, stdout, stderr io
 func executeStatus(args []string, stdout, stderr io.Writer) error {
 	flags := flag.NewFlagSet("jobman-agent status", flag.ContinueOnError)
 	flags.SetOutput(stderr)
+	configPath := registerAgentConfiguration(flags)
 	stateDirectory := flags.String("state-dir", "", "absolute host-local agent state directory")
 	jsonOutput := flags.Bool("json", false, "emit versioned JSON")
 	if err := flags.Parse(args); err != nil {
+		return err
+	}
+	if _, err := applyAgentConfiguration(flags, *configPath); err != nil {
 		return err
 	}
 	if flags.NArg() != 0 || *stateDirectory == "" {
@@ -295,6 +322,7 @@ func executeStatus(args []string, stdout, stderr io.Writer) error {
 func executeBootstrap(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 	flags := flag.NewFlagSet("jobman-agent bootstrap", flag.ContinueOnError)
 	flags.SetOutput(stderr)
+	configPath := registerAgentConfiguration(flags)
 	host := flags.String("host", "", "OpenSSH destination or configured host alias")
 	agentBinary := flags.String("agent-binary", "", "Linux jobman-agent binary to transfer")
 	sshExecutable := flags.String("ssh", "ssh", "OpenSSH client executable")
@@ -313,7 +341,7 @@ func executeBootstrap(ctx context.Context, args []string, stdin io.Reader, stdou
 	artifactS3Prefix := flags.String("artifact-s3-prefix", "", "optional S3 object prefix")
 	artifactS3Region := flags.String("artifact-s3-region", "", "optional AWS region")
 	artifactS3Owner := flags.String("artifact-s3-expected-owner", "", "expected 12-digit AWS account ID")
-	awsExecutable := flags.String("aws-cli", "aws", "remote AWS CLI executable")
+	awsExecutable := flags.String("aws-cli", defaultAWSExecutable, "remote AWS CLI executable")
 	containerEngine := flags.String("container-engine", "", "docker, podman, or apptainer runtime")
 	containerExecutable := flags.String("container-runtime", "", "remote container engine executable")
 	containerHostNetwork := flags.Bool("container-host-network", false, "allow portable host-network requests")
@@ -323,6 +351,9 @@ func executeBootstrap(ctx context.Context, args []string, stdin io.Reader, stdou
 	slurmRoot := flags.String("slurm-root", "", "absolute private NFS execution-bundle root")
 	slurmRunner := flags.String("slurm-runner", "", "absolute agent path visible on compute nodes")
 	if err := flags.Parse(args); err != nil {
+		return err
+	}
+	if _, err := applyAgentConfiguration(flags, *configPath); err != nil {
 		return err
 	}
 	if flags.NArg() != 0 || *host == "" || *agentBinary == "" || *serverURL == "" || *targetGeneration == "" {
@@ -370,7 +401,7 @@ func executeRunExecution(ctx context.Context, args []string, stderr io.Writer) e
 	artifactS3Prefix := flags.String("artifact-s3-prefix", "", "optional S3 object prefix")
 	artifactS3Region := flags.String("artifact-s3-region", "", "optional AWS region")
 	artifactS3Owner := flags.String("artifact-s3-expected-owner", "", "expected 12-digit AWS account ID")
-	awsExecutable := flags.String("aws-cli", "aws", "AWS CLI executable")
+	awsExecutable := flags.String("aws-cli", defaultAWSExecutable, "AWS CLI executable")
 	containerEngine := flags.String("container-engine", "", "docker, podman, or apptainer runtime")
 	containerExecutable := flags.String("container-runtime", "", "container engine executable")
 	containerHostNetwork := flags.Bool("container-host-network", false, "allow portable host-network requests")
@@ -416,7 +447,7 @@ func executeRunArrayTask(ctx context.Context, args []string, stderr io.Writer) e
 	artifactS3Prefix := flags.String("artifact-s3-prefix", "", "optional S3 object prefix")
 	artifactS3Region := flags.String("artifact-s3-region", "", "optional AWS region")
 	artifactS3Owner := flags.String("artifact-s3-expected-owner", "", "expected 12-digit AWS account ID")
-	awsExecutable := flags.String("aws-cli", "aws", "AWS CLI executable")
+	awsExecutable := flags.String("aws-cli", defaultAWSExecutable, "AWS CLI executable")
 	containerEngine := flags.String("container-engine", "", "docker, podman, or apptainer runtime")
 	containerExecutable := flags.String("container-runtime", "", "container engine executable")
 	containerHostNetwork := flags.Bool("container-host-network", false, "allow portable host-network requests")
@@ -479,6 +510,7 @@ func writeAgentUsage(destination io.Writer) {
 	_, _ = fmt.Fprintln(destination, `Usage: jobman-agent <command>
 
 Commands:
+  config          validate, show, or describe agent deployment configuration
   bootstrap       install, enroll, and start an agent through OpenSSH
   enroll          enroll this host with Jobman Control
   recover         recover expired credentials with a fresh enrollment token

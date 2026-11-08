@@ -9,9 +9,11 @@ import (
 	"runtime"
 )
 
+const operatingSystemWindows = "windows"
+
 func isOwnerExecutableRegular(information fs.FileInfo) bool {
 	return information.Mode().IsRegular() &&
-		(runtime.GOOS == "windows" || information.Mode().Perm()&0o100 != 0)
+		(runtime.GOOS == operatingSystemWindows || information.Mode().Perm()&0o100 != 0)
 }
 
 func prepareStateDirectory(path string) (string, error) {
