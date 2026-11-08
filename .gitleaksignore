@@ -1,0 +1,4 @@
+# Reviewed historical false positives only; no path-wide or test-wide exclusions.
+# Hashes, fixed filenames/identifiers and prose are not reusable credentials.
+# New fingerprints require review; run Gitleaks with --redact=100.
+11e4c831c33db11af30299c16f44b6934ac80a82:Makefile:generic-api-key:57
