@@ -1060,7 +1060,13 @@ func TestSchemaAndMigrationValidationEdges(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		t.Cleanup(func() { _ = tx.Rollback() })
+		// Finish rollback before testing cancels this subtest's context; an
+		// asynchronous cancellation rollback can otherwise outlive DB cleanup.
+		defer func() {
+			if rollbackErr := tx.Rollback(); rollbackErr != nil {
+				t.Errorf("rollback migration fixture: %v", rollbackErr)
+			}
+		}()
 		if err := database.applyMigration(t.Context(), tx, migration{version: 9, sql: "not valid SQL"}, 8); err == nil {
 			t.Fatal("applyMigration(invalid SQL) error = nil")
 		}
@@ -1071,7 +1077,13 @@ func TestSchemaAndMigrationValidationEdges(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		t.Cleanup(func() { _ = tx.Rollback() })
+		// Finish rollback before testing cancels this subtest's context; an
+		// asynchronous cancellation rollback can otherwise outlive DB cleanup.
+		defer func() {
+			if rollbackErr := tx.Rollback(); rollbackErr != nil {
+				t.Errorf("rollback migration fixture: %v", rollbackErr)
+			}
+		}()
 		item := migration{version: 9, sql: "DROP TABLE schema_migrations"}
 		if err := database.applyMigration(t.Context(), tx, item, 8); err == nil {
 			t.Fatal("applyMigration(missing history table) error = nil")
