@@ -8,6 +8,8 @@ semantic-release.
 
 ## [Unreleased]
 
+## [1.10.2] - 2026-11-09
+
 ### Fixed
 
 - Retry cancellation when a concurrent process startup changes the stored job
@@ -592,7 +594,8 @@ Release version.
 
 [Keep a Changelog]: https://keepachangelog.com/en/1.1.0/
 [Semantic Versioning]: https://semver.org/spec/v2.0.0.html
-[Unreleased]: https://github.com/ryancswallace/jobman/compare/v1.10.1...HEAD
+[Unreleased]: https://github.com/ryancswallace/jobman/compare/v1.10.2...HEAD
+[1.10.2]: https://github.com/ryancswallace/jobman/compare/v1.10.1...v1.10.2
 [1.10.1]: https://github.com/ryancswallace/jobman/compare/v1.10.0...v1.10.1
 [1.10.0]: https://github.com/ryancswallace/jobman/compare/v1.9.1...v1.10.0
 [1.9.1]: https://github.com/ryancswallace/jobman/compare/v1.9.0...v1.9.1
