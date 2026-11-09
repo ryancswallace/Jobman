@@ -7,9 +7,8 @@ architecture, requirements, implementation milestones, and product decisions.
 It is the authoritative design contract. This page is a short overview; if the
 two documents conflict, the formal specification controls.
 
-Implementation is guided by the
-[initial vertical-slice plan](IMPLEMENTATION_PLAN.md) and the indexed
-[architecture decision records](adr/README.md).
+The indexed [architecture decision records](adr/README.md) record the
+decisions behind the specification.
 
 A post-v1 extension for deterministic diagnostic evidence and an optional
 independently installed diagnosis companion is described in the
@@ -18,10 +17,6 @@ released core evidence, external-command dispatch, resource observations,
 failure fingerprints, and exact similarity history. Jobman Diagnose v0.1.0
 released deterministic analysis and optional generated-model augmentation.
 These additive facilities do not change the frozen v1 Jobman contract.
-The corresponding
-[diagnosis implementation plan](DIAGNOSIS_IMPLEMENTATION_PLAN.md) divides that
-proposal into independently releasable core, companion, provider, evaluation,
-and enrichment work packages.
 
 A post-v1 [shared and distributed execution design](DISTRIBUTED_MODE.md)
 introduces PostgreSQL-backed shared state, a first-class per-user agent,
@@ -56,10 +51,11 @@ unimplemented or unverified.
 
 The implementation's storage formats and measured portability are recorded
 separately in the [persisted-schema reference](PERSISTED_SCHEMA.md) and
-[platform capability record](PLATFORM_CAPABILITIES.md). The initial vertical
-slice and the subsequent v1 policy expansion are tracked in the
-[implementation plan](IMPLEMENTATION_PLAN.md). Those records distinguish the
-implemented contract from evidence that must be repeated for each release.
+[platform capability record](PLATFORM_CAPABILITIES.md). Current usage is
+documented in the [documentation index](../README.md). The original
+[standalone](https://github.com/ryancswallace/Jobman/blob/388dec1ba9b735ca0c671a5c5b031664db343af3/docs/design/IMPLEMENTATION_PLAN.md) and
+[diagnosis](https://github.com/ryancswallace/Jobman/blob/388dec1ba9b735ca0c671a5c5b031664db343af3/docs/design/DIAGNOSIS_IMPLEMENTATION_PLAN.md) implementation plans are
+preserved at the v1.10.2 release commit for historical reference.
 
 ## Product model
 

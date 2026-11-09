@@ -10,9 +10,9 @@ remains subject to the recorded and live evaluation gates for each release;
 none of this changes the frozen v1 specification.
 Last updated: 2026-08-09
 
-Implementation sequencing, work packages, compatibility gates, and release
-criteria are defined in the
-[diagnosis implementation plan](DIAGNOSIS_IMPLEMENTATION_PLAN.md).
+See the [evidence contract](../DIAGNOSTIC_EVIDENCE.md) and
+[Jobman Diagnose compatibility guide](https://github.com/ryancswallace/Jobman-Diagnose/blob/main/docs/COMPATIBILITY.md)
+for current interfaces and provider qualification.
 
 This document specifies deterministic diagnostic evidence in Jobman plus a
 separately installed `jobman-diagnose` Go project for explaining why a managed

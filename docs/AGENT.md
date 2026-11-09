@@ -49,9 +49,11 @@ Apptainer Slurm containers are supported under fail-closed target policy. SSH
 bootstrap and hardened Linux systemd user-service installation are
 implemented. Collections are independently accepted child executions;
 compatible Slurm collections compile to one array allocation with per-task
-identity and outcomes. Standalone Slurm CLI control, AWS provisioning and
-environment acceptance, directories or archives, retries, and dependency
-graphs are not implemented in this slice.
+identity and outcomes. Jobman Control evaluates cross-target dependency
+graphs and admits their eligible jobs through the normal assignment protocol.
+Standalone Slurm CLI control, AWS provisioning, directory and archive
+artifacts, and shared retries remain outside the implemented scope.
+Deployment acceptance depends on the selected scheduler and environment.
 
 ## Trust and durability model
 

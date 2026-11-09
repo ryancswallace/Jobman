@@ -1185,9 +1185,8 @@ The v1 CLI and machine contracts are frozen in
 
 ## 21. Implementation milestones
 
-The first end-to-end work is detailed in the
-[initial vertical-slice implementation plan](IMPLEMENTATION_PLAN.md). The
-supervisor and persistence choices are governed by
+The following milestones record the original standalone delivery sequence.
+The supervisor and persistence choices are governed by
 [ADR-0001](adr/0001-per-job-supervisor.md) and
 [ADR-0002](adr/0002-sqlite-metadata-and-filesystem-logs.md).
 
