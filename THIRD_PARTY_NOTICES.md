@@ -623,9 +623,9 @@ Module: <https://pkg.go.dev/github.com/spf13/cobra@v1.10.2>
           incurred by, or claims asserted against, such Contributor by reason
           of your accepting any such warranty or additional liability.
 
-## github.com/spf13/pflag v1.0.10
+## github.com/spf13/pflag v1.1.0
 
-Module: <https://pkg.go.dev/github.com/spf13/pflag@v1.0.10>
+Module: <https://pkg.go.dev/github.com/spf13/pflag@v1.1.0>
 
 ### LICENSE
 
@@ -1262,9 +1262,9 @@ Module: <https://pkg.go.dev/modernc.org/memory@v1.12.1>
     SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-## modernc.org/sqlite v1.61.0
+## modernc.org/sqlite v1.61.1
 
-Module: <https://pkg.go.dev/modernc.org/sqlite@v1.61.0>
+Module: <https://pkg.go.dev/modernc.org/sqlite@v1.61.1>
 
 ### LICENSE
 

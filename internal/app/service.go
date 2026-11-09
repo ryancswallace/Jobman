@@ -823,7 +823,9 @@ func (service *Service) stopCancelledTarget(
 	prior model.JobState,
 	result model.TransitionResult,
 ) (model.JobState, error) {
-	if result.Run == nil || result.Run.Process == nil {
+	// A retried cancellation may observe a completed run that retains its
+	// historical process identity. Only an active stop intent permits signaling.
+	if result.Run == nil || result.Run.Process == nil || result.Run.Phase != model.RunPhaseStopping {
 		return result.Job, nil
 	}
 
