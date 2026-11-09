@@ -18,5 +18,6 @@ released.
 - [Dogfood runbook]({{ site.baseurl }}/project/dogfood/)
 - [Changelog]({{ site.baseurl }}/project/changelog/)
 
-Implementation plans and architecture decision records remain available in
-the [source repository](https://github.com/ryancswallace/jobman/tree/main/docs/design).
+Design specifications, architecture decisions, and links to historical plans
+are available in the
+[source repository](https://github.com/ryancswallace/jobman/tree/main/docs/design).
