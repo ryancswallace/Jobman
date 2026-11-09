@@ -8,6 +8,14 @@ semantic-release.
 
 ## [Unreleased]
 
+### Fixed
+
+- Retry cancellation when a concurrent process startup changes the stored job
+  revision, preserving the original request time and avoiding signals to a run
+  that has already completed.
+- Update command-line parsing and SQLite dependencies, including prepared
+  statement reuse and context-aware transaction completion fixes.
+
 ## [1.10.1] - 2026-11-08
 
 ### Fixed

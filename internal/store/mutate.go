@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -205,17 +206,32 @@ func (s *Store) RequestCancellation(
 	jobID model.JobID,
 	requestedAt time.Time,
 ) (model.TransitionResult, error) {
-	job, err := s.GetJob(ctx, jobID)
+	// Startup and completion may advance the snapshot before its CAS commits.
+	// Recompute intent and effects, but leave model and other storage failures
+	// intact. Bound contention independently of the caller's deadline.
+	var err error
+	for range 8 {
+		if contextErr := ctx.Err(); contextErr != nil {
+			return model.TransitionResult{}, contextErr
+		}
+		var result model.TransitionResult
+		result, err = s.tryCancellation(ctx, jobID, requestedAt)
+		var conflict *RevisionConflictError
+		if !errors.As(err, &conflict) {
+			return result, err
+		}
+	}
+	return model.TransitionResult{}, err
+}
+
+func (s *Store) tryCancellation(
+	ctx context.Context,
+	jobID model.JobID,
+	requestedAt time.Time,
+) (model.TransitionResult, error) {
+	job, run, err := s.cancellationSnapshot(ctx, jobID)
 	if err != nil {
 		return model.TransitionResult{}, err
-	}
-	var run *model.RunState
-	if job.ActiveRunID != "" {
-		value, getErr := s.GetRun(ctx, job.ActiveRunID)
-		if getErr != nil {
-			return model.TransitionResult{}, getErr
-		}
-		run = &value
 	}
 	result, err := model.RequestCancellation(job, run, requestedAt)
 	if err != nil {
@@ -229,6 +245,38 @@ func (s *Store) RequestCancellation(
 	}
 
 	return result, nil
+}
+
+func (s *Store) cancellationSnapshot(
+	ctx context.Context,
+	jobID model.JobID,
+) (job model.JobState, run *model.RunState, err error) {
+	// A transition updates the job and run together. Observe them together too,
+	// so a mixed snapshot cannot masquerade as a genuine model conflict.
+	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return model.JobState{}, nil, fmt.Errorf("begin cancellation snapshot: %w", classifySQLite("begin cancellation snapshot", err))
+	}
+	defer func() {
+		if rollbackErr := tx.Rollback(); rollbackErr != nil && !errors.Is(rollbackErr, sql.ErrTxDone) {
+			err = errors.Join(err, fmt.Errorf("rollback cancellation snapshot: %w", rollbackErr))
+		}
+	}()
+	job, err = getJobWithQueryer(ctx, tx, jobID)
+	if err != nil {
+		return model.JobState{}, nil, err
+	}
+	if job.ActiveRunID != "" {
+		value, getErr := getRunWithQueryer(ctx, tx, job.ActiveRunID)
+		if getErr != nil {
+			return model.JobState{}, nil, getErr
+		}
+		run = &value
+	}
+	if err := tx.Commit(); err != nil {
+		return model.JobState{}, nil, fmt.Errorf("commit cancellation snapshot: %w", err)
+	}
+	return job, run, nil
 }
 
 // FinalizeCancellationWithoutRun completes cancellation accepted after claim
