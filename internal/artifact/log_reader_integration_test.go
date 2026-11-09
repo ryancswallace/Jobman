@@ -3,11 +3,14 @@
 package artifact
 
 import (
+	"bytes"
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"testing/iotest"
 )
 
 // TestLogReaderProvisionedFilesystem is opt-in because its root must be an
@@ -41,6 +44,36 @@ func TestLogReaderProvisionedFilesystem(t *testing.T) {
 	if _, err := store.PutLogImmutable(readerTestKey, []byte("shared synthetic log\n")); err != nil {
 		t.Fatal(err)
 	}
+	second := strings.Replace(readerTestKey, "00000001.chunk", "00000002.chunk", 1)
+	interrupted := errors.New("synthetic interruption after partial write")
+	source := io.MultiReader(bytes.NewBufferString("partial"), iotest.ErrReader(interrupted))
+	if _, err := store.putReaderObject(second, source, 20, 20, true); !errors.Is(err, interrupted) {
+		t.Fatalf("interrupted publication: %v", err)
+	}
+	if _, err := os.Lstat(filepath.Join(root, second)); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("partial write created a final object: %v", err)
+	}
+	entries, err = os.ReadDir(filepath.Dir(filepath.Join(root, readerTestKey)))
+	if err != nil || len(entries) != 1 {
+		t.Fatalf("unexpected staging entries after interruption: %v %v", entries, err)
+	}
+	if err := os.Symlink(filepath.Join(root, private), filepath.Join(root, second)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.PutLogImmutable(second, []byte("must not publish\n")); err == nil {
+		t.Fatal("producer followed an existing object symlink")
+	}
+	if err := os.Remove(filepath.Join(root, second)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.PutLogImmutable(second, []byte("retry after interruption\n")); err != nil {
+		t.Fatal(err)
+	}
+	logShapedPrivate := strings.Replace(readerTestKey, "00000001.chunk", "00000003.chunk", 1)
+	if _, err := store.PutImmutable(logShapedPrivate, []byte("private log-shaped object\n")); err != nil {
+		t.Fatal(err)
+	}
+	assertReaderMode(t, filepath.Join(root, logShapedPrivate), 0o600)
 	if _, err := store.PutLogImmutable(readerTestKey, []byte("shared synthetic log\n")); err != nil {
 		t.Fatal(err)
 	}
@@ -73,5 +106,18 @@ func TestLogReaderProvisionedRead(t *testing.T) {
 	private := strings.Replace(readerTestKey, "logs/stdout/00000001.chunk", "artifacts/result", 1)
 	if _, err := reader.ReadVerified(private, 27, Digest([]byte("private synthetic artifact\n"))); err == nil {
 		t.Fatal("named reader accessed private artifact")
+	}
+}
+
+func TestLogReaderProvisionedRevoked(t *testing.T) {
+	root := os.Getenv("JOBMAN_TEST_LOG_READER_REVOKED_ROOT")
+	if root == "" {
+		t.Skip("set JOBMAN_TEST_LOG_READER_REVOKED_ROOT as the original producer")
+	}
+	if _, err := NewFilesystemStore("logs", 1, root); err == nil {
+		t.Fatal("producer accepted a revoked reader mapping")
+	}
+	if _, err := os.ReadFile(filepath.Join(root, readerTestKey)); err != nil {
+		t.Fatalf("reader revocation affected producer access: %v", err)
 	}
 }

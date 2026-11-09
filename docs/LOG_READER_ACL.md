@@ -27,7 +27,8 @@ default:other::---
 
 Keep owning-group and other data access absent. Parent directories outside the
 store root need operator-provisioned traversal; Jobman neither verifies nor
-changes those ancestors. Preserve NFS `root_squash`. The operator owns UID
+changes those ancestors. A newly provisioned root needs mode `0750` with no
+inherited set-group-ID bit. Preserve NFS `root_squash`. The operator owns UID
 assignment and consistent mapping across the storage server, producer, and
 broker. Never assign the broker the producer's owner UID.
 
@@ -53,7 +54,9 @@ reader access, and the reader API exposes no publication operations.
 Existing directories with masked reader access are rejected. Provision only
 the canonical shared prefixes and existing log chunks before enabling the
 policy; do not recursively grant the broker access to artifact payloads or
-other files. The producer never installs ACL grants or changes existing modes.
+other files. Use explicit private modes for bundle and credential directories
+and files. A default ACL can override a process's umask. The producer never
+installs ACL grants or changes existing modes.
 Disabling the policy does not revoke previously granted access; the operator
 must remove that reader's grants separately if revocation is intended.
 
@@ -146,5 +149,12 @@ for separate broker read, broker write denial, unrelated-user denial, and
 root-squash checks. As the named reader, set
 `JOBMAN_TEST_LOG_READER_READ_ROOT` to that same directory and run only
 `TestLogReaderProvisionedRead` to verify the read-only API succeeds while
-producer initialization and private-artifact reads fail. The operator then removes that disposable tree. Never point
-this test at a production store root.
+producer initialization and private-artifact reads fail. The producer test also
+interrupts a write after some bytes reach private staging, refuses a symlink
+at the final object key, and verifies retry and a private log-shaped object.
+Remove the named reader's access and default grants on the disposable tree.
+Confirm that fresh reads fail for that identity and the writer still reads the
+original bytes. Run `TestLogReaderProvisionedRevoked` as the writer with
+`JOBMAN_TEST_LOG_READER_REVOKED_ROOT` to verify that the old policy fails closed.
+The operator then removes the disposable tree. Never point these tests at a
+production store root.
