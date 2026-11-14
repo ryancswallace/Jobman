@@ -126,7 +126,6 @@ func TestAwaitRunnablePauseDuringWaitEvaluation(t *testing.T) {
 	}
 }
 
-
 func TestQueueSatisfiedWaitingJobRequiresAChangedRevision(t *testing.T) {
 	fixture := submitSupervisorFixture(t, true)
 	database := openSupervisorStore(t, fixture.stateDir)
@@ -138,8 +137,8 @@ func TestQueueSatisfiedWaitingJobRequiresAChangedRevision(t *testing.T) {
 	if err != nil {
 		t.Fatalf("move job to waiting: %v", err)
 	}
-	if _, err := database.Pause(t.Context(), job.ID, now.Add(time.Millisecond)); err != nil {
-		t.Fatalf("pause waiting job: %v", err)
+	if _, pauseErr := database.Pause(t.Context(), job.ID, now.Add(time.Millisecond)); pauseErr != nil {
+		t.Fatalf("pause waiting job: %v", pauseErr)
 	}
 
 	// The scheduler's preceding waiting snapshot is now stale. It should
@@ -154,8 +153,8 @@ func TestQueueSatisfiedWaitingJobRequiresAChangedRevision(t *testing.T) {
 	if !model.IsConflict(err) || retry {
 		t.Fatalf("queue unchanged paused snapshot = (%+v, retry=%t, %v)", observed, retry, err)
 	}
-	if _, err := database.Resume(t.Context(), job.ID, now.Add(4*time.Millisecond)); err != nil {
-		t.Fatalf("resume waiting job: %v", err)
+	if _, resumeErr := database.Resume(t.Context(), job.ID, now.Add(4*time.Millisecond)); resumeErr != nil {
+		t.Fatalf("resume waiting job: %v", resumeErr)
 	}
 	reloaded, err := database.GetJob(t.Context(), job.ID)
 	if err != nil {
