@@ -10,6 +10,8 @@ semantic-release.
 
 ### Fixed
 
+- Keep a waiting supervisor alive when concurrent pause/resume changes its state between prerequisite evaluation and admission, instead of losing ownership.
+
 - Build with Go 1.26.11 to address standard-library security advisory GO-2026-6859.
 
 ## [1.10.2] - 2026-11-09
