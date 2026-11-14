@@ -125,3 +125,44 @@ func TestAwaitRunnablePauseDuringWaitEvaluation(t *testing.T) {
 		t.Fatalf("wait for resumed scheduling: %v", ctx.Err())
 	}
 }
+
+
+func TestQueueSatisfiedWaitingJobRequiresAChangedRevision(t *testing.T) {
+	fixture := submitSupervisorFixture(t, true)
+	database := openSupervisorStore(t, fixture.stateDir)
+	defer closeSupervisorStore(t, database)
+
+	job := claimCoverageFixture(t, database, fixture, time.Minute)
+	now := time.Now().UTC()
+	waiting, err := database.MoveJob(t.Context(), job.ID, model.JobPhaseWaiting, now, "prerequisites")
+	if err != nil {
+		t.Fatalf("move job to waiting: %v", err)
+	}
+	if _, err := database.Pause(t.Context(), job.ID, now.Add(time.Millisecond)); err != nil {
+		t.Fatalf("pause waiting job: %v", err)
+	}
+
+	// The scheduler's preceding waiting snapshot is now stale. It should
+	// reread the paused state rather than terminating the supervisor.
+	observed, retry, err := queueSatisfiedWaitingJob(t.Context(), database, waiting.Job, now.Add(2*time.Millisecond))
+	if err != nil || !retry || observed.Phase != model.JobPhasePaused {
+		t.Fatalf("queue stale waiting snapshot = (%+v, retry=%t, %v)", observed, retry, err)
+	}
+
+	// An unchanged invalid phase is a real conflict, not permission to loop.
+	observed, retry, err = queueSatisfiedWaitingJob(t.Context(), database, observed, now.Add(3*time.Millisecond))
+	if !model.IsConflict(err) || retry {
+		t.Fatalf("queue unchanged paused snapshot = (%+v, retry=%t, %v)", observed, retry, err)
+	}
+	if _, err := database.Resume(t.Context(), job.ID, now.Add(4*time.Millisecond)); err != nil {
+		t.Fatalf("resume waiting job: %v", err)
+	}
+	reloaded, err := database.GetJob(t.Context(), job.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	queued, retry, err := queueSatisfiedWaitingJob(t.Context(), database, reloaded, now.Add(5*time.Millisecond))
+	if err != nil || retry || queued.Phase != model.JobPhaseQueued {
+		t.Fatalf("queue resumed waiting job = (%+v, retry=%t, %v)", queued, retry, err)
+	}
+}
