@@ -145,35 +145,60 @@ func awaitRunnable(
 			)
 			return schedulerResult{terminal: completeErr == nil, job: completed.Job}, completeErr
 		}
-		if dependencies.Ready && waitDecision.Satisfied {
-			if err := database.MarkPrerequisitesSatisfied(operationCtx, job.ID, now); err != nil {
+		if !dependencies.Ready || !waitDecision.Satisfied {
+			if nextPoll <= 0 {
+				nextPoll = schedulerPollInterval
+			}
+			if err := waitForSchedulerTick(
+				stopCtx, operationCtx, database, jobID, jitteredSchedulerPoll(nextPoll, jitter),
+			); err != nil {
 				return schedulerResult{}, err
 			}
-			if job.Phase == model.JobPhaseWaiting {
-				moved, moveErr := database.MoveJob(
-					operationCtx,
-					jobID,
-					model.JobPhaseQueued,
-					now,
-					"prerequisites_satisfied",
-				)
-				if moveErr != nil {
-					return schedulerResult{}, moveErr
-				}
-				job = moved.Job
-			}
+			continue
+		}
 
-			return acquireAdmission(stopCtx, operationCtx, database, job, jitter)
-		}
-		if nextPoll <= 0 {
-			nextPoll = schedulerPollInterval
-		}
-		if err := waitForSchedulerTick(
-			stopCtx, operationCtx, database, jobID, jitteredSchedulerPoll(nextPoll, jitter),
-		); err != nil {
+		if err := database.MarkPrerequisitesSatisfied(operationCtx, job.ID, now); err != nil {
 			return schedulerResult{}, err
 		}
+		if job.Phase == model.JobPhaseWaiting {
+			moved, retry, moveErr := queueSatisfiedWaitingJob(operationCtx, database, job, now)
+			if moveErr != nil {
+				return schedulerResult{}, moveErr
+			}
+			if retry {
+				continue
+			}
+			job = moved
+		}
+		return acquireAdmission(stopCtx, operationCtx, database, job, jitter)
 	}
+}
+
+// queueSatisfiedWaitingJob tolerates a concurrent lifecycle transition after
+// prerequisite evaluation. Only an observed revision change permits a retry;
+// unrelated store failures remain fatal.
+func queueSatisfiedWaitingJob(
+	ctx context.Context,
+	database *store.Store,
+	job model.JobState,
+	at time.Time,
+) (model.JobState, bool, error) {
+	moved, err := database.MoveJob(ctx, job.ID, model.JobPhaseQueued, at, "prerequisites_satisfied")
+	if err == nil {
+		return moved.Job, false, nil
+	}
+	if !model.IsConflict(err) && !errors.Is(err, store.ErrConflict) {
+		return model.JobState{}, false, err
+	}
+	current, getErr := database.GetJob(ctx, job.ID)
+	if getErr != nil {
+		return model.JobState{}, false, errors.Join(err, getErr)
+	}
+	if current.Revision == job.Revision {
+		return model.JobState{}, false, err
+	}
+
+	return current, true, nil
 }
 
 func acquireAdmission(
