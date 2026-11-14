@@ -25,7 +25,7 @@ jobs:
     if: >-
       github.event_name != 'workflow_run' ||
       github.event.workflow_run.conclusion == 'success'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
       actions: read
@@ -104,3 +104,28 @@ jobs:
             echo
             echo "Create and review the maintenance pull request: ${compare_url}"
           } >> "${GITHUB_STEP_SUMMARY}"
+
+  validate:
+    name: Validate repository invariants
+    if: github.event_name != 'workflow_run'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Check out complete history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.version
+          check-latest: true
+          cache-dependency-path: go.sum
+
+      - name: Validate code, documentation, vulnerability and release metadata
+        run: make quick-check docs vulncheck workflow-check shellcheck release-metadata-check notices-check
+
+      - name: Require deterministic repository output
+        run: git diff --exit-code
