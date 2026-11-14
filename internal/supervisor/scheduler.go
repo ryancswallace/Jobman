@@ -150,29 +150,14 @@ func awaitRunnable(
 				return schedulerResult{}, err
 			}
 			if job.Phase == model.JobPhaseWaiting {
-				moved, moveErr := database.MoveJob(
-					operationCtx,
-					jobID,
-					model.JobPhaseQueued,
-					now,
-					"prerequisites_satisfied",
-				)
+				moved, retry, moveErr := queueSatisfiedWaitingJob(operationCtx, database, job, now)
 				if moveErr != nil {
-					// Pause/resume or cancellation may change the job after the
-					// wait condition was evaluated. A stale phase/revision is not
-					// a supervisor failure: reload before attempting admission.
-					if model.IsConflict(moveErr) || errors.Is(moveErr, store.ErrConflict) {
-						current, getErr := database.GetJob(operationCtx, jobID)
-						if getErr != nil {
-							return schedulerResult{}, errors.Join(moveErr, getErr)
-						}
-						if current.Revision != job.Revision {
-							continue
-						}
-					}
 					return schedulerResult{}, moveErr
 				}
-				job = moved.Job
+				if retry {
+					continue
+				}
+				job = moved
 			}
 
 			return acquireAdmission(stopCtx, operationCtx, database, job, jitter)
@@ -186,6 +171,33 @@ func awaitRunnable(
 			return schedulerResult{}, err
 		}
 	}
+}
+
+// queueSatisfiedWaitingJob tolerates a concurrent lifecycle transition after
+// prerequisite evaluation. Only an observed revision change permits a retry;
+// unrelated store failures remain fatal.
+func queueSatisfiedWaitingJob(
+	ctx context.Context,
+	database *store.Store,
+	job model.JobState,
+	at time.Time,
+) (model.JobState, bool, error) {
+	moved, err := database.MoveJob(ctx, job.ID, model.JobPhaseQueued, at, "prerequisites_satisfied")
+	if err == nil {
+		return moved.Job, false, nil
+	}
+	if !model.IsConflict(err) && !errors.Is(err, store.ErrConflict) {
+		return model.JobState{}, false, err
+	}
+	current, getErr := database.GetJob(ctx, job.ID)
+	if getErr != nil {
+		return model.JobState{}, false, errors.Join(err, getErr)
+	}
+	if current.Revision == job.Revision {
+		return model.JobState{}, false, err
+	}
+
+	return current, true, nil
 }
 
 func acquireAdmission(
