@@ -145,31 +145,32 @@ func awaitRunnable(
 			)
 			return schedulerResult{terminal: completeErr == nil, job: completed.Job}, completeErr
 		}
-		if dependencies.Ready && waitDecision.Satisfied {
-			if err := database.MarkPrerequisitesSatisfied(operationCtx, job.ID, now); err != nil {
+		if !dependencies.Ready || !waitDecision.Satisfied {
+			if nextPoll <= 0 {
+				nextPoll = schedulerPollInterval
+			}
+			if err := waitForSchedulerTick(
+				stopCtx, operationCtx, database, jobID, jitteredSchedulerPoll(nextPoll, jitter),
+			); err != nil {
 				return schedulerResult{}, err
 			}
-			if job.Phase == model.JobPhaseWaiting {
-				moved, retry, moveErr := queueSatisfiedWaitingJob(operationCtx, database, job, now)
-				if moveErr != nil {
-					return schedulerResult{}, moveErr
-				}
-				if retry {
-					continue
-				}
-				job = moved
-			}
+			continue
+		}
 
-			return acquireAdmission(stopCtx, operationCtx, database, job, jitter)
-		}
-		if nextPoll <= 0 {
-			nextPoll = schedulerPollInterval
-		}
-		if err := waitForSchedulerTick(
-			stopCtx, operationCtx, database, jobID, jitteredSchedulerPoll(nextPoll, jitter),
-		); err != nil {
+		if err := database.MarkPrerequisitesSatisfied(operationCtx, job.ID, now); err != nil {
 			return schedulerResult{}, err
 		}
+		if job.Phase == model.JobPhaseWaiting {
+			moved, retry, moveErr := queueSatisfiedWaitingJob(operationCtx, database, job, now)
+			if moveErr != nil {
+				return schedulerResult{}, moveErr
+			}
+			if retry {
+				continue
+			}
+			job = moved
+		}
+		return acquireAdmission(stopCtx, operationCtx, database, job, jitter)
 	}
 }
 
