@@ -158,6 +158,18 @@ func awaitRunnable(
 					"prerequisites_satisfied",
 				)
 				if moveErr != nil {
+					// Pause/resume or cancellation may change the job after the
+					// wait condition was evaluated. A stale phase/revision is not
+					// a supervisor failure: reload before attempting admission.
+					if model.IsConflict(moveErr) || errors.Is(moveErr, store.ErrConflict) {
+						current, getErr := database.GetJob(operationCtx, jobID)
+						if getErr != nil {
+							return schedulerResult{}, errors.Join(moveErr, getErr)
+						}
+						if current.Revision != job.Revision {
+							continue
+						}
+					}
 					return schedulerResult{}, moveErr
 				}
 				job = moved.Job
