@@ -8,6 +8,10 @@ semantic-release.
 
 ## [Unreleased]
 
+### Fixed
+
+- Build with Go 1.26.11 to address standard-library security advisory GO-2026-6859.
+
 ## [1.10.2] - 2026-11-09
 
 ### Fixed
