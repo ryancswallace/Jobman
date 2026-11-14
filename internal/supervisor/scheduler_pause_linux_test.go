@@ -100,10 +100,17 @@ func TestAwaitRunnablePauseDuringWaitEvaluation(t *testing.T) {
 	if paused.Phase != model.JobPhasePaused {
 		t.Fatalf("phase after ready probe = %q, want paused", paused.Phase)
 	}
+	// Allow a scheduler tick while the persisted phase is still paused.
+	// Without the conflict recovery, the scheduler exits on its stale
+	// waiting -> queued transition and the owner eventually becomes lost.
+	pausedTick := time.NewTimer(250 * time.Millisecond)
+	defer pausedTick.Stop()
 	select {
 	case got := <-done:
 		t.Fatalf("scheduler exited instead of respecting pause: %+v", got)
-	default:
+	case <-pausedTick.C:
+	case <-ctx.Done():
+		t.Fatalf("wait while paused: %v", ctx.Err())
 	}
 
 	if _, err := database.Resume(ctx, job.ID, time.Now().UTC()); err != nil {
