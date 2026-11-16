@@ -8,6 +8,8 @@ semantic-release.
 
 ## [Unreleased]
 
+## [1.10.3] - 2026-11-14
+
 ### Fixed
 
 - Keep a waiting supervisor alive when concurrent pause/resume changes its state between prerequisite evaluation and admission, instead of losing ownership.
@@ -600,7 +602,8 @@ Release version.
 
 [Keep a Changelog]: https://keepachangelog.com/en/1.1.0/
 [Semantic Versioning]: https://semver.org/spec/v2.0.0.html
-[Unreleased]: https://github.com/ryancswallace/jobman/compare/v1.10.2...HEAD
+[Unreleased]: https://github.com/ryancswallace/jobman/compare/v1.10.3...HEAD
+[1.10.3]: https://github.com/ryancswallace/jobman/compare/v1.10.2...v1.10.3
 [1.10.2]: https://github.com/ryancswallace/jobman/compare/v1.10.1...v1.10.2
 [1.10.1]: https://github.com/ryancswallace/jobman/compare/v1.10.0...v1.10.1
 [1.10.0]: https://github.com/ryancswallace/jobman/compare/v1.9.1...v1.10.0
