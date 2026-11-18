@@ -608,7 +608,8 @@ Release version.
 
 [Keep a Changelog]: https://keepachangelog.com/en/1.1.0/
 [Semantic Versioning]: https://semver.org/spec/v2.0.0.html
-[Unreleased]: https://github.com/ryancswallace/jobman/compare/v1.10.3...HEAD
+[Unreleased]: https://github.com/ryancswallace/jobman/compare/v1.10.4...HEAD
+[1.10.4]: https://github.com/ryancswallace/jobman/compare/v1.10.3...v1.10.4
 [1.10.3]: https://github.com/ryancswallace/jobman/compare/v1.10.2...v1.10.3
 [1.10.2]: https://github.com/ryancswallace/jobman/compare/v1.10.1...v1.10.2
 [1.10.1]: https://github.com/ryancswallace/jobman/compare/v1.10.0...v1.10.1
