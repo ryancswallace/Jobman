@@ -8,6 +8,12 @@ semantic-release.
 
 ## [Unreleased]
 
+## [1.10.4] - 2026-11-18
+
+### Fixed
+
+- Update the Alpine base image used for release containers.
+
 ## [1.10.3] - 2026-11-14
 
 ### Fixed
