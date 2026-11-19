@@ -8,6 +8,13 @@ semantic-release.
 
 ## [Unreleased]
 
+## [1.10.5] - 2026-11-18
+
+### Fixed
+
+- Update SQLite to 1.62.0 and refresh libc and system dependencies, including
+  the packaged third-party notices.
+
 ## [1.10.4] - 2026-11-18
 
 ### Fixed
@@ -608,7 +615,8 @@ Release version.
 
 [Keep a Changelog]: https://keepachangelog.com/en/1.1.0/
 [Semantic Versioning]: https://semver.org/spec/v2.0.0.html
-[Unreleased]: https://github.com/ryancswallace/jobman/compare/v1.10.4...HEAD
+[Unreleased]: https://github.com/ryancswallace/jobman/compare/v1.10.5...HEAD
+[1.10.5]: https://github.com/ryancswallace/jobman/compare/v1.10.4...v1.10.5
 [1.10.4]: https://github.com/ryancswallace/jobman/compare/v1.10.3...v1.10.4
 [1.10.3]: https://github.com/ryancswallace/jobman/compare/v1.10.2...v1.10.3
 [1.10.2]: https://github.com/ryancswallace/jobman/compare/v1.10.1...v1.10.2
