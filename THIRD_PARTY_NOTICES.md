@@ -731,9 +731,9 @@ Module: <https://pkg.go.dev/go.yaml.in/yaml/v3@v3.0.6>
     See the License for the specific language governing permissions and
     limitations under the License.
 
-## golang.org/x/sys v0.49.0
+## golang.org/x/sys v0.50.0
 
-Module: <https://pkg.go.dev/golang.org/x/sys@v0.49.0>
+Module: <https://pkg.go.dev/golang.org/x/sys@v0.50.0>
 
 ### LICENSE
 
@@ -790,9 +790,9 @@ Module: <https://pkg.go.dev/golang.org/x/sys@v0.49.0>
     rights granted to you under this License for this implementation of Go
     shall terminate as of the date such litigation is filed.
 
-## modernc.org/libc v1.79.0
+## modernc.org/libc v1.80.1
 
-Module: <https://pkg.go.dev/modernc.org/libc@v1.79.0>
+Module: <https://pkg.go.dev/modernc.org/libc@v1.80.1>
 
 ### LICENSE
 
@@ -1262,9 +1262,9 @@ Module: <https://pkg.go.dev/modernc.org/memory@v1.12.1>
     SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-## modernc.org/sqlite v1.61.1
+## modernc.org/sqlite v1.62.0
 
-Module: <https://pkg.go.dev/modernc.org/sqlite@v1.61.1>
+Module: <https://pkg.go.dev/modernc.org/sqlite@v1.62.0>
 
 ### LICENSE
 
@@ -1342,7 +1342,7 @@ Module: <https://pkg.go.dev/modernc.org/sqlite@v1.61.1>
     | [Go](https://github.com/golang/go) | -- | BSD-3-Clause | modernc.org/libc | [N1](#N1) |
     | [go-netdb](https://github.com/dominikh/go-netdb) | -- | MIT | modernc.org/libc | [N1](#N1) |
     | [golang.org/x/sys](https://pkg.go.dev/golang.org/x/sys) | v0.49.0 | BSD-3-Clause | github.com/google/pprof, github.com/mattn/go-isatty, modernc.org/libc, modernc.org/memory, `go.mod` | [L3](#L3) |
-    | [modernc.org/libc](https://pkg.go.dev/modernc.org/libc) | v1.79.0 | BSD-3-Clause | `go.mod` | [L4](#L4) |
+    | [modernc.org/libc](https://pkg.go.dev/modernc.org/libc) | v1.80.1 | BSD-3-Clause | `go.mod` | [L4](#L4) |
     | [modernc.org/mathutil](https://pkg.go.dev/modernc.org/mathutil) | v1.7.1 | BSD-3-Clause | modernc.org/fileutil, modernc.org/libc, modernc.org/memory, `go.mod` | [L4](#L4) |
     | [modernc.org/memory](https://pkg.go.dev/modernc.org/memory) | v1.12.1 | BSD-3-Clause, attribution reference | modernc.org/libc, `go.mod` | [L4](#L4), [L2](#L2), [L5](#L5), [L6](#L6) |
     | [musl libc](https://musl.libc.org/) | -- | MIT | modernc.org/libc | [N1](#N1) |
@@ -1387,8 +1387,8 @@ Module: <https://pkg.go.dev/modernc.org/sqlite@v1.61.1>
     | [golang.org/x/mod](https://pkg.go.dev/golang.org/x/mod) | v0.42.0 | BSD-3-Clause | modernc.org/libc | [L3](#L3) |
     | [golang.org/x/sync](https://pkg.go.dev/golang.org/x/sync) | v0.24.0 | BSD-3-Clause | modernc.org/libc | [L3](#L3) |
     | [golang.org/x/tools](https://pkg.go.dev/golang.org/x/tools) | v0.52.0 | BSD-3-Clause | modernc.org/libc | [L3](#L3) |
-    | [modernc.org/cc/v4](https://pkg.go.dev/modernc.org/cc/v4) | v4.30.3 | BSD-3-Clause | modernc.org/libc | [L4](#L4) |
-    | [modernc.org/ccgo/v4](https://pkg.go.dev/modernc.org/ccgo/v4) | v4.37.0 | BSD-3-Clause | modernc.org/libc | [L4](#L4) |
+    | [modernc.org/cc/v4](https://pkg.go.dev/modernc.org/cc/v4) | v4.30.6-0.20261101114202-1b9d1a076f6b | BSD-3-Clause | modernc.org/libc | [L4](#L4) |
+    | [modernc.org/ccgo/v4](https://pkg.go.dev/modernc.org/ccgo/v4) | v4.38.1 | BSD-3-Clause | modernc.org/libc | [L4](#L4) |
     | [modernc.org/gc/v2](https://pkg.go.dev/modernc.org/gc/v2) | v2.6.5 | BSD-3-Clause | modernc.org/libc | [L16](#L16) |
     | [modernc.org/gc/v3](https://pkg.go.dev/modernc.org/gc/v3) | v3.2.0 | BSD-3-Clause | modernc.org/libc | [L16](#L16) |
     | [modernc.org/goabi0](https://pkg.go.dev/modernc.org/goabi0) | v0.2.0 | BSD-3-Clause | modernc.org/libc | [L17](#L17) |

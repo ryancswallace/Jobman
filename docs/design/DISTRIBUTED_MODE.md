@@ -2223,11 +2223,11 @@ assuming these documentation pages never change:
   same-host/network-filesystem restriction;
 - [PostgreSQL `SELECT`](https://www.postgresql.org/docs/current/sql-select.html),
   including the queue-oriented limits of `SKIP LOCKED`;
-- Slurm [`sbatch`](https://slurm.schedmd.com/sbatch.html),
-  [`squeue`](https://slurm.schedmd.com/squeue.html),
-  [`sacct`](https://slurm.schedmd.com/sacct.html), and
-  [`scancel`](https://slurm.schedmd.com/scancel.html) command contracts;
-- [Slurm job array support](https://slurm.schedmd.com/job_array.html), including
+- Slurm [`sbatch`](https://github.com/SchedMD/slurm/blob/slurm-25-05-8-1/doc/man/man1/sbatch.1),
+  [`squeue`](https://github.com/SchedMD/slurm/blob/slurm-25-05-8-1/doc/man/man1/squeue.1),
+  [`sacct`](https://github.com/SchedMD/slurm/blob/slurm-25-05-8-1/doc/man/man1/sacct.1), and
+  [`scancel`](https://github.com/SchedMD/slurm/blob/slurm-25-05-8-1/doc/man/man1/scancel.1) command contracts;
+- [Slurm job array support](https://github.com/SchedMD/slurm/blob/slurm-25-05-8-1/doc/html/job_array.shtml), including
   homogeneous options and non-guaranteed task ordering;
 - [AWS ParallelCluster overview](https://docs.aws.amazon.com/parallelcluster/latest/ug/what-is-aws-parallelcluster.html);
   and
