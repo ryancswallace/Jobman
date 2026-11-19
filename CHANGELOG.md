@@ -10,6 +10,11 @@ semantic-release.
 
 ## [1.10.5] - 2026-11-18
 
+### Fixed
+
+- Update SQLite to 1.62.0 and refresh libc and system dependencies, including
+  the packaged third-party notices.
+
 ## [1.10.4] - 2026-11-18
 
 ### Fixed
